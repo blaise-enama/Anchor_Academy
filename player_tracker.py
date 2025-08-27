@@ -13,7 +13,7 @@ def connect_to_database(host_name, user_name, user_password, database):
             passwd= user_password,
             db= database
         )
-        print("MySQL Database connection successful!")
+        print("MySQL Database connection successful!") 
             
         #host= 'localhost',
         #user='root@localhost',             #Use to write a unit test for this function 
@@ -54,6 +54,7 @@ class Session:
 
         conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.
         conn.close()
+
 
 class Player:
     #initialize attributes of the player object
