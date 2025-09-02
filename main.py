@@ -3,23 +3,22 @@ from player_tracker import *
 from datetime import datetime, date
 
 def main():
+    """
+    this main function creates a player/ multiple players, and a training session for that player. 
+    player ID is auto-fetched using cursor.lastrowid to ensure that the session is linked to the correct player
+    """
     #Connect to MySQL
 
-    conn = mysql.connector.connect(
-        host = "localhost",
-        user = "root@locahost",
-        password = "Enamfam.7",
-        database = "Anchor_Academy"
-    )
+    conn = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy')
 
     # Create Player instance
     player = Player(3, "Lionel Messi", "F", 36, "Inter Miami")
-    player_id = player.save_to_db()
+    player_id = player.save_to_db(conn)
     print(f"Player '{player.name}' saved with ID {player_id}")
 
  
     #add Sessions
-    session = Session(player_id, date.today(), 120, 10.5,15, 24.7, 137, 52)
+    session = Session(player_id, date.today(), 120, 45.7,15, 24.7, 137, 52)
     #player.add_session(Session(datetime(2025, 8, 12), 120, 9.8, 18, 31.2, 38, 42))
 
     # Save players and Sessions
