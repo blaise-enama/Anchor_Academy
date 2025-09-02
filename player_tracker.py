@@ -1,11 +1,10 @@
 import mysql
+import csv
 from mysql.connector import Error
 from datetime import datetime
-import pandas as pd
 
 
 def connect_to_database(host_name, user_name, user_password, database):
-    connection = None
     try:
         connection = mysql.connector.connect(
             host=host_name,
@@ -24,6 +23,7 @@ def connect_to_database(host_name, user_name, user_password, database):
         print(f"Error while connecting to MySQL: {e}")
     return connection
 
+
 class Session:
     def __init__(self, player_id, session_date, duration, distance, sprint_count, max_speed, touches_left, touches_right):
         self.player_id = player_id
@@ -35,6 +35,26 @@ class Session:
         self.touches_left = touches_left
         self.touches_right = touches_right
 
+    def load_sessions_from_csv(file_path, player_id, conn):
+        """
+        this is a loader function that reads the file exported from the Playermaker tracker, and
+        creates a Session object for each record, and savees it to the database. 
+
+        Now one function call (load_sessions_from_csv("messi_august.csv", 1, conn)) updates all of Messis sessions automatically.
+        """
+        with open(file_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                session = Session(
+                    session_id=int(row["session_id"]),
+                    player_id=player_id,
+                    date=datetime.strptime(row["date"], "%Y-%m-%d"),
+                    duration=int(row["duration"]),
+                    distance_covered=float(row["distance_covered"])
+                )
+                session.save_to_db(conn)
+
+    
     def foot_usage_ratio(self):
         # a method for determining the ratio of touches between left and right 
         total_touches = self.touches_left + self.touches_right
@@ -44,16 +64,17 @@ class Session:
     def work_rate(self):
         pass
 
-    def save_to_db(self):
-        conn = connect_database()
+    def save_to_db(self, conn):
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO sessions (player_id, date, distance, sprint_count) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        cursor.execute("""
+            INSERT INTO sessions (player_id, date, duration, distance, sprint_count, max_speed, touches_left, touches_right) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE date=%s, duration=%s, distance=%s, sprint_count=%s, max_speed=%s, touches_left=%s, touches_right=%s
+        """,
             (self.player_id, self.session_date, self.duration, self.distance, self.sprints, self.max_speed, self.touches_left, self.touches_right)
         )
 
-        conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.
-        conn.close()
+        conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.        conn.close()
 
 
 class Player:
@@ -70,18 +91,17 @@ class Player:
         self.sessions.append(session)
 
 
-    def save_to_db(self):
-        conn = connect_database()
+    def save_to_db(self,conn):
         cursor = conn.cursor() # establish a connection with the server
-        cursor.execute(
-            "INSERT INTO roster (name, position, age, team) VALUES (%s, %s, %s, %s)",
-            (self.name, self.position, self.age, self.team)
+        cursor.execute("""
+            INSERT INTO roster (player_id,name, position, age, team) 
+            VALUES (%s, %s, %s, %s, %s) 
+            ON DUPLICATE KEY UPDATE name=%s, position=%s, age=%s
+        """,(self.player_id, self.name, self.position, self.age, self.team)
         )
         conn.commit()
-        player_id = cursor.lastrowid
-        conn.close()
+        #player_id = cursor.lastrowid
         
-        return player_id
     
 
     
