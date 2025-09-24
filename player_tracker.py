@@ -1,27 +1,75 @@
-import mysql
+import mysql.connector
 import csv
+import logging
+import pandas as pd
 from mysql.connector import Error
 from datetime import datetime
+from sqlalchemy import create_engine
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+
+logging.info("This is an informational message.")
+logging.warning("This is a warning message.")
+logging.error("This is an error message.")
 
 def connect_to_database(host_name, user_name, user_password, database):
     try:
-        connection = mysql.connector.connect(
+        conn = mysql.connector.connect(
             host=host_name,
             user=user_name,
             passwd= user_password,
             db= database
         )
-        print("MySQL Database connection successful!") 
+        logging.info("MySQL Database connection successful!") 
             
         #host= 'localhost',
         #user='root@localhost',             #Use to write a unit test for this function 
         #password='Enamfam.7',
         #database='Anchor_academy.roster'
+
+        if conn.is_connected():
+            db_info = conn.get_server_info()
+            logging.info(f"successfully connected to MySQL Server version {db_info}")
+            cursor = conn.cursor()
+            cursor.execute("SELECT Anchor_Academy();")
+            record = cursor.fetchone()
+            print(f"You're connected to database: {record[0]}")
     
     except Error as e:
         print(f"Error while connecting to MySQL: {e}")
-    return connection
+    finally:
+        if 'connection' in locals() and conn.is_connected():
+            cursor.close()
+            conn.close()
+            print("MySQL connection is closed")
+
+
+def get_mysql_csv(table):
+    """
+    A function that pulls a mysql table into a csv file using pandas' read_sql method
+    After establishing a connection
+
+    Parameters:
+    table: the name of the mysql table that is to be specified upon calling the function
+    """
+    try:
+        #Create a database engine
+        db_connection_str = 'mysql+pymysql://root:Enamfam.7@localhost/Anchor_academy'
+        db_connection = create_engine(db_connection_str)
+
+        #Define the table and output CSV file
+        table_name = table      # "roster"
+        output_csv_file = "players_data.csv"
+
+        #read data from MySQL into a pandas Dataframe
+        df = pd.read_sql(f"SELECT * FROM {table_name}", db_connection)
+
+        #Export DataFrame to CSV
+        df.to_csv(output_csv_file, index=False) # index = False prevents writing DataFrame index as a column
+        print(f"Data from '{table_name}' exported to '{output_csv_file}' successfully using pandas.")
+
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 class Session:
@@ -64,10 +112,48 @@ class Session:
     def work_rate(self):
         pass
 
+    def mysql_to_csv(self, conn):
+        #A function to pull a mysql table into a csv using mysql.connector and csv
+        """
+        takes conn, an established mysql database connection, and executes a command to fetch all data from a given table
+
+        """
+        try:
+            mysql_cursor = conn.cursor()
+
+            #Define the table and output CSV file
+            table_name = "sessions"
+            output_csv_file = "sessions_data.csv"
+
+            #Execute query to fetch data
+            mysql_cursor.execute(f"SELECT * FROM {table_name}")
+
+            # Get column names for the header
+            column_names = [i[0] for i in mysql_cursor.description]
+
+            #fetch all rows
+            rows = mysql_cursor.fetchall()
+
+            #write data into a CSV
+            with open(output_csv_file, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile)
+                csv_writer.writerow(column_names)  # writes header
+                csv_writer.writerows(rows)  # write data rows
+        except mysql.connector.Error as err:
+            print(f"Error: {err}")
+
+        finally:
+            if 'conn' in locals() and conn.is_connected():
+                mysql_cursor.close()
+                conn.close()
+
+
+
+
     def save_to_db(self, conn):
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO sessions (player_id, date, duration, distance, sprint_count, max_speed, touches_left, touches_right) 
+            INSERT INTO Anchor_Academy.sessions (player_id, date, duration, distance, sprint_count, max_speed, touches_left, touches_right) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE date=%s, duration=%s, distance=%s, sprint_count=%s, max_speed=%s, touches_left=%s, touches_right=%s
         """,
@@ -83,7 +169,7 @@ class Player:
         self.player_id = player_id
         self.name = name
         self.position = position
-        self.age = age
+        self.age = age 
         self.team = team
         self.sessions = [] # stores multiple Sessions objects
 

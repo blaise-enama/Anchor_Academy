@@ -1,0 +1,35 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "xprotocol",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "MySQL Local",
+            "database": "Anchor_Academy",
+            "username": "root",
+            "connectionTimeout": 30,
+            "askForPassword": true,
+            "group": "Anchor_Academy"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "Anchor_Academy Local",
+            "database": "Anchor_Academy",
+            "username": "root",
+            "password": "Enamfam.7",
+            "connectionTimeout": 30
+        }
+    ]
+}
