@@ -1,5 +1,5 @@
 import mysql.connector
-from player_tracker import *
+from player_tracker import connect_to_database
 from datetime import datetime, date
 
 def main():
@@ -8,8 +8,9 @@ def main():
     player ID is auto-fetched using cursor.lastrowid to ensure that the session is linked to the correct player
     """
     # Establish a connection with the current Anchor_Academy Database
-    connection = connect_to_database('localhost','root@localhost', 'Enamfam.7', 'Anchor_Academy')
-    return connection
+    connection = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy') #Using mysql-connector-python
+    conn = connect_to_database('localhost','root','Enamfam.7','Anchor_Academy',driver='pymysql')        # Using PyMySQL
+    return conn
 """
 
     # Create Player instance
