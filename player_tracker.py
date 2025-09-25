@@ -8,40 +8,54 @@ from sqlalchemy import create_engine
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
-logging.info("This is an informational message.")
-logging.warning("This is a warning message.")
-logging.error("This is an error message.")
 
-def connect_to_database(host_name, user_name, user_password, database):
+def connect_to_database(host_name, user_name, user_password, database,driver="mysql-connector"):
+    conn = None
     try:
-        conn = mysql.connector.connect(
-            host=host_name,
-            user=user_name,
-            passwd= user_password,
-            db= database
-        )
+        if driver == 'mysql-connector':
+            conn = mysql.connector.connect(
+                host=host_name,
+                user=user_name,
+                passwd= user_password,
+                db= database
+            )
+        elif driver == 'pymysql':
+            import pymysql
+            conn = pymysql.connect(
+                host=host_name,
+                user=user_name,
+                passwd= user_password,
+                db= database
+            )
+        else:
+            raise ValueError("Unsupported driver. Use 'mysql-connector' or 'pymysql'.")
+        
         logging.info("MySQL Database connection successful!") 
             
         #host= 'localhost',
         #user='root@localhost',             #Use to write a unit test for this function 
         #password='Enamfam.7',
-        #database='Anchor_academy.roster'
+        #database='Anchor_academy'
 
-        if conn.is_connected():
+        """if conn.is_connected():
             db_info = conn.get_server_info()
             logging.info(f"successfully connected to MySQL Server version {db_info}")
             cursor = conn.cursor()
             cursor.execute("SELECT Anchor_Academy();")
             record = cursor.fetchone()
-            print(f"You're connected to database: {record[0]}")
+            print(f"You're connected to database: {record[0]}")"""
     
     except Error as e:
-        print(f"Error while connecting to MySQL: {e}")
-    finally:
+        logging.info(f"Error while connecting to MySQL: {e}")
+        conn = None
+
+    """finally:
         if 'connection' in locals() and conn.is_connected():
             cursor.close()
             conn.close()
-            print("MySQL connection is closed")
+            print("MySQL connection is closed")"""
+
+    return conn
 
 
 def get_mysql_csv(table):
@@ -85,8 +99,8 @@ class Session:
 
     def load_sessions_from_csv(file_path, player_id, conn):
         """
-        this is a loader function that reads the file exported from the Playermaker tracker, and
-        creates a Session object for each record, and savees it to the database. 
+        this is a loader function that reads the file exported from the Playermaker tracker, creates a Session object for each record, 
+        and savees it to the database. 
 
         Now one function call (load_sessions_from_csv("messi_august.csv", 1, conn)) updates all of Messis sessions automatically.
         """
@@ -113,7 +127,7 @@ class Session:
         pass
 
     def mysql_to_csv(self, conn):
-        #A function to pull a mysql table into a csv using mysql.connector and csv
+        #A function to pull a mysql table into a csv using mysql.connector and csv (for pandas usage/ visualization?)
         """
         takes conn, an established mysql database connection, and executes a command to fetch all data from a given table
 
