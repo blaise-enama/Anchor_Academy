@@ -1,4 +1,5 @@
 import mysql.connector
+import pymysql
 import csv
 import logging
 import pandas as pd
@@ -20,7 +21,6 @@ def connect_to_database(host_name, user_name, user_password, database,driver="my
                 db= database
             )
         elif driver == 'pymysql':
-            import pymysql
             conn = pymysql.connect(
                 host=host_name,
                 user=user_name,
@@ -36,26 +36,26 @@ def connect_to_database(host_name, user_name, user_password, database,driver="my
         #user='root@localhost',             #Use to write a unit test for this function 
         #password='Enamfam.7',
         #database='Anchor_academy'
-
-        """if conn.is_connected():
-            db_info = conn.get_server_info()
-            logging.info(f"successfully connected to MySQL Server version {db_info}")
-            cursor = conn.cursor()
-            cursor.execute("SELECT Anchor_Academy();")
-            record = cursor.fetchone()
-            print(f"You're connected to database: {record[0]}")"""
     
     except Error as e:
         logging.info(f"Error while connecting to MySQL: {e}")
         conn = None
 
-    """finally:
-        if 'connection' in locals() and conn.is_connected():
-            cursor.close()
-            conn.close()
-            print("MySQL connection is closed")"""
-
     return conn
+
+def execute_query(conn,query):
+    """
+    do i need this function if I can just run cursor.execute("SELECT...;")
+    """
+    #establish a connection
+    cursor = conn.cursor() 
+    try:
+        # execute the given query
+        cursor.execute(query)
+        #commit
+        conn.commit()
+    except Error as e:
+        logging.info({e})
 
 
 def get_mysql_csv(table):
@@ -96,6 +96,7 @@ class Session:
         self.max_speed = max_speed
         self.touches_left = touches_left
         self.touches_right = touches_right
+        self.sessions = []
 
     def load_sessions_from_csv(file_path, player_id, conn):
         """
@@ -118,12 +119,25 @@ class Session:
 
     
     def foot_usage_ratio(self):
-        # a method for determining the ratio of touches between left and right 
+        """
+        a method for determining the ratio of touches between left and right 
+        """
+        
+        #combine left and right touches for a comined total
         total_touches = self.touches_left + self.touches_right
-        return self.touches_right / total_touches if total_touches else 0
+
+        #return the ratio 
+        r_foot_ratio= self.touches_right / total_touches 
+        l_foot_ratio= self.touches_left / total_touches
+
+        #return a tuple of right to left ratios
+        return (r_foot_ratio,l_foot_ratio)
 
         
     def work_rate(self):
+        """
+        a method for determining the work rate of a player for each session
+        """
         pass
 
     def mysql_to_csv(self, conn):
@@ -160,8 +174,6 @@ class Session:
             if 'conn' in locals() and conn.is_connected():
                 mysql_cursor.close()
                 conn.close()
-
-
 
 
     def save_to_db(self, conn):
