@@ -1,12 +1,13 @@
 import unittest
 import mysql.connector
+import pymysql
 from unittest.mock import patch, MagicMock
 from player_tracker import connect_to_database
 
 
 class TestDatabaseConncection(unittest.TestCase):
 
-    @patch("player_tracker.mysql.connector.connect")
+    @patch("pymysql.connect")
     def test_connection_success(self, mock_connect):
         # Arrange: mock successful connection
         mock_conn = MagicMock()
@@ -20,23 +21,29 @@ class TestDatabaseConncection(unittest.TestCase):
             host="localhost",
             user="root",
             passwd="fakepassword",
-            db="Anchor_Academy" # substitute with test_academy
+            db="Anchor_Academy", # substitute with test_academy
+            driver="pymysql"
         )
 
         self.assertEqual(conn, mock_conn)
 
 
-    @patch("player_tracker.mysql.connector.connect", side_effect=Exception("Connection failed"))
+    @patch("pymysql.connect", side_effect=Exception("Connection failed"))
     def test_connection_failure(self,mock_connect):
         #simulate mysql throwing an error
-        mock_connect.side_effect = mysql.connector.Error("Unable to establisn a connection")
+        mock_connect.side_effect = mysql.connection.Error("Unable to establisn a connection")
+        
+        #simulate pymysql throwing an error
+        mock_connect.side_effect = pymysql.err.OperationalError(203, "Can't connect to the MySQL server")
+
 
         # Act
         conn = connect_to_database(
             "localhost", 
             "root@localhost", 
             "notthepassword", 
-            "test_db")
+            "test_db",
+            driver="pymysql")
 
         # Assert
         mock_connect.assert_called_once()
