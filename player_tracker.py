@@ -43,19 +43,20 @@ def connect_to_database(host_name, user_name, user_password, database,driver="my
 
     return conn
 
-def execute_query(conn,query):
+def execute_query(conn,query, params=None):
     """
+    Execute a query safely with pymysql
     do i need this function if I can just run cursor.execute("SELECT...;")
     """
-    #establish a connection
-    cursor = conn.cursor() 
     try:
-        # execute the given query
-        cursor.execute(query)
-        #commit
-        conn.commit()
-    except Error as e:
-        logging.info({e})
+        with conn.cursor() as cursor:
+            cursor.execute(query, params) 
+            conn.commit()
+
+    except Exception as e:
+        logging.info(f"Error executing query: {e}")
+    
+    return None
 
 
 def get_mysql_csv(table):
@@ -85,6 +86,30 @@ def get_mysql_csv(table):
     except Exception as e:
         print(f"Error: {e}")
 
+class Player:
+    #initialize attributes of the player object
+    def __init__(self, player_id, name, position, age, team):
+        self.player_id = player_id
+        self.name = name
+        self.position = position
+        self.age = age 
+        self.team = team
+        self.sessions = [] # stores multiple Sessions objects
+
+    def add_session(self,session):
+        self.sessions.append(session)
+
+
+    def save_to_db(self,conn):
+        cursor = conn.cursor() # establish a connection with the server
+        cursor.execute("""
+            INSERT INTO roster (player_id,name, position, age, team) 
+            VALUES (%s, %s, %s, %s, %s) 
+            ON DUPLICATE KEY UPDATE name=%s, position=%s, age=%s
+        """,(self.player_id, self.name, self.position, self.age, self.team)
+        )
+        conn.commit()
+        #player_id = cursor.lastrowid
 
 class Session:
     def __init__(self, player_id, session_date, duration, distance, sprint_count, max_speed, touches_left, touches_right):
@@ -188,32 +213,39 @@ class Session:
 
         conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.        conn.close()
 
+class PlayerRepository:
+    def __init__(self, conneciton):
+        self.connection = conneciton
 
-class Player:
-    #initialize attributes of the player object
-    def __init__(self, player_id, name, position, age, team):
-        self.player_id = player_id
-        self.name = name
-        self.position = position
-        self.age = age 
-        self.team = team
-        self.sessions = [] # stores multiple Sessions objects
+    def add_player(self, player):
+        query = """
+        INSERT INTO roster (player_id, name, position,age, team)
+        VALUES (%s,%s,%s,%s,%s)
+        """
+        execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
 
-    def add_session(self,session):
-        self.sessions.append(session)
+    def get_all_players(self):
+        query = "SELECT * FROM roster"
+        return execute_query(self.connection, query, fetch=True)
+    
 
+class SessionRepository:
+    def __init__(self, connection):
+        self.connection = connection
 
-    def save_to_db(self,conn):
-        cursor = conn.cursor() # establish a connection with the server
-        cursor.execute("""
-            INSERT INTO roster (player_id,name, position, age, team) 
-            VALUES (%s, %s, %s, %s, %s) 
-            ON DUPLICATE KEY UPDATE name=%s, position=%s, age=%s
-        """,(self.player_id, self.name, self.position, self.age, self.team)
-        )
-        conn.commit()
-        #player_id = cursor.lastrowid
-        
+    def add_session(self, session):
+        query = """
+        INSERT INTO Sessions (player_id, session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        execute_query(self.connection, query, 
+                      (session.player.player_id, session.minutes_played,
+                       session.distance_covered, session.sprints, session.defensive_actions))
+
+    
+    def get_sessions_for_player(self, player_id):
+        query = "SELECT * FROM Sessions WHERE player_id = %s"
+        return execute_query(self.connection, query, (player_id,), fetch=True)
     
 
     
