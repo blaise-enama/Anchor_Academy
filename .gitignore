@@ -1,0 +1,17 @@
+#  ignore environment files
+.env 
+
+#  Ignore JSON config files with secrets
+db_config.JSON
+
+#  Ignore Python cache files
+__pycache__/
+*.pyc 
+
+#  Ignore virtual environments
+.venv/
+venv/
+
+#  Ignore VS code settings (optional)
+.vscode/
+
