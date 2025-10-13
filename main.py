@@ -1,5 +1,5 @@
 import mysql.connector
-from player_tracker import connect_to_database
+from player_tracker import *
 from datetime import datetime, date
 
 def main():
@@ -8,9 +8,35 @@ def main():
     player ID is auto-fetched using cursor.lastrowid to ensure that the session is linked to the correct player
     """
     # Establish a connection with the current Anchor_Academy Database
-    connection = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy') #Using mysql-connector-python
-    conn = connect_to_database('localhost','root','Enamfam.7','Anchor_Academy',driver='pymysql')        # Using PyMySQL
-    return conn
+    # connection = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy') #Using mysql-connector-python
+
+    conn = connect_to_database()
+
+    #create repositories
+    player_repo = PlayerRepository(conn)
+    session_repo = SessionRepository(conn)
+
+
+    # Execute an SQL query
+    insert_query = """
+    INSERT INTO roster (player_id, name, position, age, team) 
+    VALUES (%s,%s,%s,%s,%s)
+    """
+    #execute_query(conn,insert_query, (4, 'John Doe', 'CM',25,'Anchor Academy'))
+    
+    # Example: SELECT players
+    select_query = "SELECT * FROM roster WHERE team = %s"
+
+    results = execute_query(conn, select_query, ("Anchor Academy",), fetch=True)
+    
+    for row in results:
+        print(row)
+
+    #Save query to database
+    #ALWAYS close the connection when done
+    conn.close()
+    
+
 """
 
     # Create Player instance
