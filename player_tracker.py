@@ -1,8 +1,10 @@
+import os
 import mysql.connector
 import pymysql
 import csv
 import logging
 import pandas as pd
+from dotenv import load_dotenv
 from mysql.connector import Error
 from datetime import datetime
 from sqlalchemy import create_engine
@@ -10,7 +12,15 @@ from sqlalchemy import create_engine
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 
-def connect_to_database(host_name, user_name, user_password, database,driver="mysql-connector"):
+def connect_to_database():
+    load_dotenv()   # Loads .env file
+
+    host_name = os.getenv("DB_HOST")
+    user_name = os.getenv("DB_USER")
+    user_password = os.getenv("DB_PASSWORD")
+    database = os.getenv("DB_NAME")
+    driver = os.getenv("DB_DRIVER", "pymysql")
+
     conn = None
     try:
         if driver == 'mysql-connector':
@@ -31,32 +41,38 @@ def connect_to_database(host_name, user_name, user_password, database,driver="my
             raise ValueError("Unsupported driver. Use 'mysql-connector' or 'pymysql'.")
         
         logging.info("MySQL Database connection successful!") 
-            
-        #host= 'localhost',
-        #user='root@localhost',             #Use to write a unit test for this function 
-        #password='Enamfam.7',
-        #database='Anchor_academy'
     
-    except Error as e:
+    except Exception as e:
         logging.info(f"Error while connecting to MySQL: {e}")
         conn = None
 
     return conn
 
-def execute_query(conn,query, params=None):
+def execute_query(conn,query, params=None, fetch=False):
     """
-    Execute a query safely with pymysql
+    Execute a query safely using an existing pymysql connection
+
+    Args:
+        connection (pymysql.connections.Connection): Active MySQL connection object
+        query (str): SQL query to be executed.
+        params (tuple, optional) Parameters for parameterized queries 
+        fetch (bool): If True, fetch results (for SELECT queries). Otherwise, commit. 
     do i need this function if I can just run cursor.execute("SELECT...;")
     """
     try:
         with conn.cursor() as cursor:
-            cursor.execute(query, params) 
-            conn.commit()
+            cursor.execute(query, params)
+            if fetch:
+                logging.info("SELECT query executed")
+                return cursor.fetchall()
+            else:
+                conn.commit()
+                logging.info("query successfully executed")
+                return None
 
     except Exception as e:
-        logging.info(f"Error executing query: {e}")
-    
-    return None
+        logging.error(f"Error executing query: {e}")
+        return None
 
 
 def get_mysql_csv(table):
@@ -110,6 +126,12 @@ class Player:
         )
         conn.commit()
         #player_id = cursor.lastrowid
+
+
+
+
+
+
 
 class Session:
     def __init__(self, player_id, session_date, duration, distance, sprint_count, max_speed, touches_left, touches_right):
@@ -213,6 +235,11 @@ class Session:
 
         conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.        conn.close()
 
+
+
+
+
+
 class PlayerRepository:
     def __init__(self, conneciton):
         self.connection = conneciton
@@ -228,6 +255,10 @@ class PlayerRepository:
         query = "SELECT * FROM roster"
         return execute_query(self.connection, query, fetch=True)
     
+
+
+
+
 
 class SessionRepository:
     def __init__(self, connection):
