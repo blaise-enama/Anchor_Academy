@@ -5,7 +5,6 @@ import csv
 import logging
 import pandas as pd
 from dotenv import load_dotenv
-from mysql.connector import Error
 from datetime import datetime
 from sqlalchemy import create_engine
 
@@ -48,15 +47,17 @@ def connect_to_database():
 
     return conn
 
+
 def execute_query(conn,query, params=None, fetch=False):
     """
     Execute a query safely using an existing pymysql connection
 
     Args:
-        connection (pymysql.connections.Connection): Active MySQL connection object
+        conn (pymysql.connections.Connection): Active MySQL connection object
         query (str): SQL query to be executed.
         params (tuple, optional) Parameters for parameterized queries 
         fetch (bool): If True, fetch results (for SELECT queries). Otherwise, commit. 
+    
     do i need this function if I can just run cursor.execute("SELECT...;")
     """
     try:
@@ -102,6 +103,7 @@ def get_mysql_csv(table):
     except Exception as e:
         print(f"Error: {e}")
 
+
 class Player:
     #initialize attributes of the player object
     def __init__(self, player_id, name, position, age, team):
@@ -111,9 +113,6 @@ class Player:
         self.age = age 
         self.team = team
         self.sessions = [] # stores multiple Sessions objects
-
-    def add_session(self,session):
-        self.sessions.append(session)
 
 
     def save_to_db(self,conn):
@@ -251,9 +250,27 @@ class PlayerRepository:
         """
         execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
 
-    def get_all_players(self):
+
+    def get_roster(self):
         query = "SELECT * FROM roster"
         return execute_query(self.connection, query, fetch=True)
+    
+    def delete_player(self, player_name):
+        query= "DELETE FROM roster WHERE name = %s"
+        execute_query(self.connection, query)
+        logging.info(f"Successfully deleted player {player_name} from the database")
+
+    
+    def locate_player(self,player_name):
+        """Locates a given player by name 
+        
+        """
+        query = "SELECT * FROM roster WHERE name = %s"
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, (player_name))
+            return cursor.fetchone()
+        #execute_query(self.connection, query, (player_name), fetch=True)
+
     
 
 
@@ -262,11 +279,12 @@ class PlayerRepository:
 
 class SessionRepository:
     def __init__(self, connection):
+        #Initialize a SessionRepository object with a connection to an existing database
         self.connection = connection
 
     def add_session(self, session):
         query = """
-        INSERT INTO Sessions (player_id, session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right)
+        INSERT INTO sessions (player_id, session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(self.connection, query, 
@@ -274,9 +292,51 @@ class SessionRepository:
                        session.distance_covered, session.sprints, session.defensive_actions))
 
     
-    def get_sessions_for_player(self, player_id):
+    def get_sessions_by_player(self, player_id):
+        
         query = "SELECT * FROM Sessions WHERE player_id = %s"
         return execute_query(self.connection, query, (player_id,), fetch=True)
     
-
     
+    def delete_session(self, session_id):
+        """Deletes a single session by session_id.
+        """
+        try:
+            query = "DELETE FROM sessions WHERE session_id = %s"
+            with self.connection.cursor() as cursor:
+                execute_query(self.connection, query, (session_id))
+                affected_rows = cursor.rowcount  # Number of rows affected
+            self.connection.commit()
+            logging.info(f"Session {session_id} successfully deleted.")
+            return affected_rows > 0  # True if deletion succeeded, False if no record found
+        
+        except pymysql.MySQLError as e:
+            logging.info(f"Error while deleting session. : {e}")
+            self.connection.rollback()  # Ensures the database stays consistent if something fails
+            
+            return False  # Lets the application logic know whether the deletion actually occurred. 
+        
+
+    def delete_sessions_by_player(self, player_id):
+        """
+        Deletes all sessions linked to a specific player.
+        
+        Args:
+            player_id (int): The player's unique ID.
+        
+        Returns:
+            int: Number of sessions deleted.
+        """
+        try:
+            query = "DELETE FROM Sessions WHERE player_id = %s"
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (player_id,))
+                deleted_count = cursor.rowcount
+            self.conn.commit()
+            print(f"Deleted {deleted_count} sessions for player {player_id}.")
+            return deleted_count
+
+        except pymysql.MySQLError as e:
+            print(f"Error while deleting sessions for player {player_id}: {e}")
+            self.conn.rollback()
+            return 0
