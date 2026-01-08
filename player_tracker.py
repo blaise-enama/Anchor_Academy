@@ -106,7 +106,7 @@ def get_mysql_csv(table):
 
 class Player:
     #initialize attributes of the player object
-    def __init__(self, player_id, name, position, age, team):
+    def __init__(self, player_id, name, position, age, team=None):
         self.player_id = player_id
         self.name = name
         self.position = position
@@ -115,14 +115,28 @@ class Player:
         self.sessions = [] # stores multiple Sessions objects
 
 
+    def add_session(self, session):
+        self.sessions.append(session)
+
+
     def save_to_db(self,conn):
         cursor = conn.cursor() # establish a connection with the server
         cursor.execute("""
-            INSERT INTO roster (player_id,name, position, age, team) 
-            VALUES (%s, %s, %s, %s, %s) 
+            INSERT INTO roster ( name, position, age, team) 
+            VALUES (%s, %s, %s, %s) 
             ON DUPLICATE KEY UPDATE name=%s, position=%s, age=%s
         """,(self.player_id, self.name, self.position, self.age, self.team)
         )
+
+        #save session data
+        for s in self.sessions:
+            cursor.execute("""
+                INSERT INTO sessions (player_id, session_date, total_distance, sprint_count, top_speed,
+                                       touches_left, touches_right, acceleration_events, deceleration_events,
+                                       session_duration, fatigue_level)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (self.player_id, s.session_date, s.distance, s.sprints, s.top_speed,
+                  s.touches_left, s.touches_right, s.accels, s.decels, s.duration, s.fatigue))
         conn.commit()
         #player_id = cursor.lastrowid
 
@@ -240,16 +254,26 @@ class Session:
 
 
 class PlayerRepository:
+    """
+    This is a Repository class designed to manage the player table
+    """
     def __init__(self, conneciton):
         self.connection = conneciton
 
-    def add_player(self, player):
-        query = """
-        INSERT INTO roster (player_id, name, position,age, team)
-        VALUES (%s,%s,%s,%s,%s)
-        """
-        execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
 
+    def add_player(self, player):
+        """
+        adds an existing player object to the repository 
+        """
+        query = """
+        INSERT INTO roster (name, position, age, team)
+        VALUES %s,%s,%s,%s);
+        """
+        logging.info(f"query: {query}")
+        logging.info(f"query count: {query.count("%s")}")
+
+        execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
+        #self.conn.commit()
 
     def get_roster(self):
         query = "SELECT * FROM roster"
@@ -271,7 +295,26 @@ class PlayerRepository:
             return cursor.fetchone()
         #execute_query(self.connection, query, (player_name), fetch=True)
 
-    
+    def fetch_by_id(self, player_id:int):
+        """
+        Locate a given player or multiple players by id
+        """
+
+        query = "SELECT player_id, name, position, age FROM roster WHERE player_id = %s"
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, (player_id,))
+            row = cursor.fetchone()
+
+        if row:
+            return Player(
+                player_id= row[0],
+                name=row[1],
+                position=row[2],
+                age=row[3],
+                team=row[4]
+            )
+        
+        return None 
 
 
 
@@ -293,13 +336,16 @@ class SessionRepository:
 
     
     def get_sessions_by_player(self, player_id):
-        
+        """
+        Queries sessions from a given player
+        """
         query = "SELECT * FROM Sessions WHERE player_id = %s"
         return execute_query(self.connection, query, (player_id,), fetch=True)
     
     
     def delete_session(self, session_id):
-        """Deletes a single session by session_id.
+        """
+        Deletes a single session by session_id.
         """
         try:
             query = "DELETE FROM sessions WHERE session_id = %s"

@@ -1,4 +1,3 @@
-import mysql.connector
 from player_tracker import *
 from datetime import datetime, date
 
@@ -11,32 +10,38 @@ def main():
     # connection = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy') #Using mysql-connector-python
 
     conn = connect_to_database()
+    if not conn:
+        return
 
     #create repositories
     player_repo = PlayerRepository(conn)
     session_repo = SessionRepository(conn)
 
-
+    
     # Execute an SQL query
     insert_query = """
     INSERT INTO roster (player_id, name, position, age, team) 
     VALUES (%s,%s,%s,%s,%s)
     """
-    #execute_query(conn,insert_query, (4, 'John Doe', 'CM',25,'Anchor Academy'))
+    #execute_query(conn,insert_query, (6, 'Lionel Messi', 'RM',36,'Inter Miami'))
     
     # Example: SELECT players
-    select_query = "SELECT * FROM roster WHERE team = %s"
+    select_query = "SELECT * FROM roster;"
 
-    results = execute_query(conn, select_query, ("Anchor Academy",), fetch=True)
-    
-    for row in results:
-        print(row)
+    #####Execute the select query above. store it in results. You can use the execute query as the keiy driver of what is returned back to the user#####
+    results= execute_query(conn, select_query,fetch=True)
+    logging.info(f"data type of results: {type(results)}")      # tuple.... maybe refacator the DB that is returned into a didctionary? 
+
 
     #Save query to database
     #ALWAYS close the connection when done
-    conn.close()
     
-
+    
+    # print out the results
+    for row in results:
+        print(row ,"\n")
+    
+    conn.close()
 """
 
     # Create Player instance
