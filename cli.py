@@ -4,9 +4,9 @@ from player_tracker import Player, Session, PlayerRepository, SessionRepository
 
 def add_player(args, player_repo):
     player = Player(
-        name=args.name, 
-        age=args.age, 
+        name=args.name,
         position=args.position, 
+        age=args.age, 
         team=args.team
     )
     
@@ -53,6 +53,7 @@ def main():
 
     if args.command == "add-player":
         add_player(args, player_repo)
+        
     elif args.command == "list-players":
         display_players(player_repo)
     elif args.command == "delete-player":
