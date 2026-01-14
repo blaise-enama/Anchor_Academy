@@ -17,29 +17,7 @@ def main():
     player_repo = PlayerRepository(conn)
     session_repo = SessionRepository(conn)
 
-    
-    # Execute an SQL query
-    insert_query = """
-    INSERT INTO roster (player_id, name, position, age, team) 
-    VALUES (%s,%s,%s,%s,%s)
-    """
-    #execute_query(conn,insert_query, (6, 'Lionel Messi', 'RM',36,'Inter Miami'))
-    
-    # Example: SELECT players
-    select_query = "SELECT * FROM roster;"
-
-    #####Execute the select query above. store it in results. You can use the execute query as the keiy driver of what is returned back to the user#####
-    results= execute_query(conn, select_query,fetch=True)
-    logging.info(f"data type of results: {type(results)}")      # tuple.... maybe refacator the DB that is returned into a didctionary? 
-
-
-    #Save query to database
-    #ALWAYS close the connection when done
-    
-    
-    # print out the results
-    for row in results:
-        print(row ,"\n")
+    player_repo.get_roster()
     
     conn.close()
 """
