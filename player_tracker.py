@@ -106,8 +106,7 @@ def get_mysql_csv(table):
 
 class Player:
     #initialize attributes of the player object
-    def __init__(self, player_id, name, position, age, team=None):
-        self.player_id = player_id
+    def __init__(self, name, position, age, team=None):
         self.name = name
         self.position = position
         self.age = age 
@@ -122,10 +121,10 @@ class Player:
     def save_to_db(self,conn):
         cursor = conn.cursor() # establish a connection with the server
         cursor.execute("""
-            INSERT INTO roster ( name, position, age, team) 
+            INSERT INTO roster (name, position, age, team) 
             VALUES (%s, %s, %s, %s) 
             ON DUPLICATE KEY UPDATE name=%s, position=%s, age=%s
-        """,(self.player_id, self.name, self.position, self.age, self.team)
+        """,(self.name, self.position, self.age, self.team)
         )
 
         #save session data
@@ -267,17 +266,40 @@ class PlayerRepository:
         """
         query = """
         INSERT INTO roster (name, position, age, team)
-        VALUES %s,%s,%s,%s);
+        VALUES (%s,%s,%s,%s)
         """
         logging.info(f"query: {query}")
         logging.info(f"query count: {query.count("%s")}")
 
-        execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
-        #self.conn.commit()
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, (player.name,player.position,player.age,player.team))
+
+            player.player_id = cursor.lastrowid #captures generated ID
+
+        #execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
+        self.connection.commit()
+
 
     def get_roster(self):
+        """
+        Displays the full roster from a mysql database.
+        returns player objects instead of a dictionary
+        """
+
         query = "SELECT * FROM roster"
-        return execute_query(self.connection, query, fetch=True)
+        roster = execute_query(self.connection, query, fetch=True)
+        for row in roster:
+            print(row, "\n" )
+
+        return roster
+
+        #consider returning each player object in the player repository as player objects instead of a tuple
+
+
+        """return [
+            Player(row['name'], row['position'], row['age'], row['team'])
+            for row in roster
+        ]"""
     
     def delete_player(self, player_name):
         query= "DELETE FROM roster WHERE name = %s"
