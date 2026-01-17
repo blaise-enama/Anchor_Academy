@@ -106,12 +106,21 @@ def get_mysql_csv(table):
 
 class Player:
     #initialize attributes of the player object
-    def __init__(self, name, position, age, team=None):
+    def __init__(self, name, position, age, team, player_id=None):
+        self.player_id = player_id
         self.name = name
         self.position = position
         self.age = age 
         self.team = team
         self.sessions = [] # stores multiple Sessions objects
+
+    def __repr__(self):
+        return (
+            self.player_id,
+            self.name,
+            self.position,
+            self.team
+        )
 
 
     def add_session(self, session):
@@ -156,6 +165,10 @@ class Session:
         self.touches_left = touches_left
         self.touches_right = touches_right
         self.sessions = []
+
+    def add_session(self, session):
+        self.sessions.append(session)
+
 
     def load_sessions_from_csv(file_path, player_id, conn):
         """
@@ -260,16 +273,16 @@ class PlayerRepository:
         self.connection = conneciton
 
 
-    def add_player(self, player):
+    def add_player(self, player:Player)->Player:
         """
-        adds an existing player object to the repository 
+        adds a player object to the repository 
         """
         query = """
         INSERT INTO roster (name, position, age, team)
         VALUES (%s,%s,%s,%s)
         """
         logging.info(f"query: {query}")
-        logging.info(f"query count: {query.count("%s")}")
+        logging.info(f"player id: {query.count("%s")}")
 
         with self.connection.cursor() as cursor:
             cursor.execute(query, (player.name,player.position,player.age,player.team))
@@ -278,29 +291,62 @@ class PlayerRepository:
 
         #execute_query(self.connection, query, (player.name, player.position, player.age, player.team))
         self.connection.commit()
+        return player
 
 
     def get_roster(self):
         """
         Displays the full roster from a mysql database.
-        returns player objects instead of a dictionary
+        returns a roster consisting of a list of player objects opposed to dictionaries
         """
 
         query = "SELECT * FROM roster"
-        roster = execute_query(self.connection, query, fetch=True)
-        for row in roster:
-            print(row, "\n" )
+        
+        #consider returning each player asd aobject in the player repository as player objects instead of a tuple
+        with self.connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
 
-        return roster
+        """for row in rows:
+            roster = []
+            Player(**row)
+            roster.append(row)
+        for i in rows:
+            print(i,"\n")"""
+        
+        return [Player(**row) for row in rows]
 
-        #consider returning each player object in the player repository as player objects instead of a tuple
+        """for row in rows:
+            Player(
+                player_id=row["player_id"],
+                name=row["name"],
+                age=row["age"],
+                position=row["position"],
+                team=row["team"]
+            )
+        for i in rows:
+            print(i, "\n")
+        logging.info(f"roster datatype: {type(rows)}")
+        logging.info(f"row datatype: {type(i)}")
 
-
-        """return [
-            Player(row['name'], row['position'], row['age'], row['team'])
-            for row in roster
-        ]"""
+        return rows"""
     
+    """
+
+        return [
+            Player(
+                player_id=row["player_id"],
+                name=row["name"],
+                age=row["age"],
+                position=row["position"],
+                team=row["team"]
+            )
+            
+            for row in roster
+        ]
+    
+    """
+
     def delete_player(self, player_name):
         query= "DELETE FROM roster WHERE name = %s"
         execute_query(self.connection, query)
@@ -353,8 +399,10 @@ class SessionRepository:
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(self.connection, query, 
-                      (session.player.player_id, session.minutes_played,
-                       session.distance_covered, session.sprints, session.defensive_actions))
+                      (session.player.player_id, session.session_date,
+                       session.duration_minutes, session.sprint_count, 
+                       session.duration_minutes, session.total_distance, 
+                       session.max_speed, session.touches_left, session.touches_right))
 
     
     def get_sessions_by_player(self, player_id):
