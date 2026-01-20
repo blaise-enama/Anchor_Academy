@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from player_tracker import Session
-from player_tracker import SessionRepository
+from repositories.sessionRepo import SessionRepository
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -10,9 +10,8 @@ class SessionService:
     def __init__(self, sessionRepo: SessionRepository):
         self.sessionRepo = sessionRepo
         
-    def add_Session(self, player_id,session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right):
-        session_date = datetime.strptime(
-        session_date, "%Y-%m-%d").date()
+    def add_session(self, player_id,session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right):
+        session_date = datetime.strptime(session_date, "%Y-%m-%d").date()
 
         #create a domain object
         session = Session(
