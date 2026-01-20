@@ -1,7 +1,11 @@
 import argparse
+import logging
 from player_tracker import connect_to_database
 from player_tracker import Player, Session, PlayerRepository, SessionRepository
-from datetime import datetime
+from services.session_services import SessionService
+
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 
 def add_player(args, player_repo):
@@ -39,6 +43,23 @@ def add_session(args, session_repo):
     )
     session_repo.add_session(session)
 
+def handle_add_session(args):
+    conn = connect_to_database()
+    session_repo = SessionRepository(conn)
+    session_service = SessionService(session_repo)
+
+    session_id = session_service.add_Session(
+        player_id= args.player_id,
+        session_date=args.session_datel,
+        duration_minutes= args.duration_minutes,
+        sprint_count= args.sprint_count,
+        total_distance= args.total_distance, 
+        max_speed=args.max_speed,
+        touches_left= args.touches_left,
+        touches_right= args.touches_right)
+    logging.info(f"Session {session_id} added successfully!")
+
+
 
 def delete_session(args, session_repo):
     session_repo.delete_session(args.session_id)
@@ -74,7 +95,7 @@ def main():
     add_session_parser.add_argument("--max_speed", type=float, default=0, required=True)
     add_session_parser.add_argument("--left_touches", type=int, default=0)
     add_session_parser.add_argument("--right_touches", type=int, default=0)
-
+    add_session_parser.set_defaults(func=handle_add_session)
 
 
 
@@ -96,24 +117,19 @@ def main():
         #automatically deletes a player as well as their sessions via cascade
         delete_player(args, player_repo)
     elif args.command == "add-session":
-        session_date = datetime.strptime(
-        args.session_date, "%Y-%m-%d").date()
-
-        session = Session(
+        session_service = SessionService(session_repo)
+        session_service.add_session(
         player_id=args.player_id,
-        session_date=session_date,
+        session_date=args.session_date,
         duration_minutes=args.duration_minutes,
         sprint_count=args.sprint_count,
-        total_distance = args.total_distance,
-        max_speed= args.max_speed,
-        touches_left= args.left_touches,
-        touches_right= args.right_touches
+        total_distance=args.total_distance,
+        max_speed=args.max_speed,
+        touches_left=args.left_touches,
+        touches_right=args.right_touches
         )
-        
 
-        session_repo.add_session(session)
-        print("Session added successfully")
-        add_session(args, session_repo)
+
     else:
         parser.print_help()
 
