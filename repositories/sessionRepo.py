@@ -1,5 +1,9 @@
 from player_tracker import *
-
+"""
+The services layer decides what SHOULD happen.
+It services the CLI and "talks" to the database
+Manipulates the data requested from the CLI (User) to be stored 
+"""
 class SessionRepository:
     def __init__(self, connection):
         #Initialize a SessionRepository object with a connection to an existing database
@@ -11,18 +15,25 @@ class SessionRepository:
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(self.connection, query, 
-                      (session.player.player_id, session.minutes_played,
-                       session.distance_covered, session.sprints, session.defensive_actions))
+                      (session.player_id, session.session_date,
+                       session.duration, session.sprints, 
+                       session.distance, 
+                       session.max_speed, session.touches_left, session.touches_right))
+        
 
     
-    def get_sessions_by_player(self, player_id):
-        
-        query = "SELECT * FROM Sessions WHERE player_id = %s"
+    def get_player_sessions(self, player_id):
+        """
+        Queries sessions from a given player
+        """
+        query = "SELECT * FROM sessions WHERE player_id = %s ORDER BY session_date DESC"
         return execute_query(self.connection, query, (player_id,), fetch=True)
     
     
+    
     def delete_session(self, session_id):
-        """Deletes a single session by session_id.
+        """
+        Deletes a single session by session_id.
         """
         try:
             query = "DELETE FROM sessions WHERE session_id = %s"
@@ -65,4 +76,42 @@ class SessionRepository:
             return 0
 
     
+    def get_all(self):
+        query = """
+            SELECT
+                session_id,
+                player_id,
+                session_date,
+                duration_minutes,
+                sprint_count,
+                total_distance,
+                max_speed,
+                touches_left,
+                touches_right
+                
+            FROM sessions
+            """
+        
+        cursor= self.connection.cursor()
+        cursor.execute(query)
 
+        rows = cursor.fetchall()
+
+        sessions = [
+            Session(
+                session_id=row[0],
+                player_id=row[1],
+                session_date=row[2],
+                duration_minutes=row[3],
+                sprint_count=row[4],
+                total_distance=row[5],
+                max_speed=row[6],
+                touches_left=row[7],
+                touches_right=row[8]
+            )
+            for row in rows
+        ]
+
+        return sessions
+    
+        
