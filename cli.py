@@ -1,35 +1,63 @@
 import argparse
 import logging
-from player_tracker import connect_to_database
-from player_tracker import Player, Session, PlayerRepository, SessionRepository
+from player_tracker import *
+from repositories.sessionRepo import SessionRepository
+from repositories.playerRepo import PlayerRepository
 from services.session_services import SessionService
+from services.player_service import PlayerService
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
+"""
+CLI is used for triggering the system behavior upon [user] request. 
+They should be used as a human entry point for data ingestion
+functions defined here Should call a respective PlayerService method 
+No object creation, no SQL logic, just handles user input"""
 
 def add_player(args, player_repo):
-    player = Player(
+
+    player_service = PlayerService(player_repo)
+
+    #call the add_player method from the service layer
+    player_service.add_player(
         name=args.name,
         position=args.position, 
         age=args.age, 
         team=args.team
     )
+    #logging.info(f"Player added successfully under ID: {player_id}")
+
+
+def display_players(args, player_repo):
+    player_service= PlayerService(player_repo)
+
+    #trigger the service function to list players
+    players = player_service.list_players()
     
-    saved_player = player_repo.add_player(player)
-    print(f"Player created with ID {saved_player.player_id}")
-
-
-def display_players(player_repo):
-    players = player_repo.get_roster()
-    for p in players:
-        print(p)
+    if not players:
+        print("No players found.")
+        return
+    
+    for player in players:
+        print(
+            f"ID: {player.player_id} | "
+            f"Name: {player.name} | "
+            f"Position: {player.position} | "
+            f"Age: {player.age} | "
+            f"Team: {player.team}"
+        )
+    
 
 def delete_player(args, player_repo):
+    player_service = PlayerService(player_repo)
+    player_service.delete
     player_repo.delete_player(args.player_name)
 
 
 def add_session(args, session_repo):
+    session_service = SessionService(session_repo)
+
     session = Session(
         player_id=args.player_id,
         session_date=args.session_date,
@@ -60,9 +88,57 @@ def handle_add_session(args):
     logging.info(f"Session {session_id} added successfully!")
 
 
+def list_sessions(args, session_repo):
+    """
+    lists all the sessions recorded in the database
+    """
+    session_service = SessionService(session_repo)
+    sessions = session_service.list_sessions()
 
-def delete_session(args, session_repo):
-    session_repo.delete_session(args.session_id)
+    if not sessions:
+        print("No sessions found.")
+        return
+    for s in sessions:
+        print(
+            f"Session ID: {s.session_id} | "
+            f"Player ID: {s.player_id} | "
+            f"Date: {s.session_date} | "
+            f"Duration: {s.duration} min | "
+            f"Sprints: {s.sprints} |"
+            f"Distance: {s.distance} m | "
+            f"Max Speed: {s.max_speed} | "
+            f"Left Touches: {s.touches_left} |"
+            f"Right Touches: {s.touches_right} |"
+        )
+
+
+def list_player_sessions(args, sessionRepo):
+    session_service = SessionService(sessionRepo)
+    sessions = session_service.list_player_sessions(args.player_id)
+
+    if not sessions:
+        print(f"No sessions found for player {args.player_id}")
+        return
+
+    for s in sessions:        
+        print(
+            f"Session ID: {s.session_id} | "
+            f"Date: {s.session_date} | "
+            f"Duration: {s.duration} min | "
+            f"Sprints: {s.sprints} |" 
+            f"Distance: {s.distance} m | "
+            f"Max Speed: {s.max_speed} |"
+            f"Left Touches: {s.touches_left} |"
+            f"Right Touches: {s.touches_right} |"
+        ) 
+
+
+def delete_session(args, session_service):
+    try:
+        session_service.delete_session(args.session_id)
+        print(f"Session {args.session_id} deleted successfully")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 def main():
@@ -98,6 +174,18 @@ def main():
     add_session_parser.set_defaults(func=handle_add_session)
 
 
+    # ---- Delete Sessions ----
+    delete_session_parser = subparsers.add_parser("delete-session")
+    delete_session_parser.add_argument("--session-id", type=int, required=True)
+
+
+    # ---- Display Sessions ----
+    subparsers.add_parser("list-sessions", help="Display all sessions recorded for every player")
+
+    #---- Display sessions by player ID -----
+    player_session_parser=subparsers.add_parser("player-sessions", help="Display all sessions recorded for a player")
+    player_session_parser.add_argument("--player_id", type=int, required=True)
+
 
     args = parser.parse_args()
     
@@ -107,28 +195,24 @@ def main():
     
     player_repo = PlayerRepository(conn)
     session_repo = SessionRepository(conn)
+    session_service = SessionService(session_repo)
 
     if args.command == "add-player":
         add_player(args, player_repo)
 
     elif args.command == "list-players":
-        display_players(player_repo)
+        display_players(args,player_repo)
     elif args.command == "delete-player":
         #automatically deletes a player as well as their sessions via cascade
         delete_player(args, player_repo)
     elif args.command == "add-session":
-        session_service = SessionService(session_repo)
-        session_service.add_session(
-        player_id=args.player_id,
-        session_date=args.session_date,
-        duration_minutes=args.duration_minutes,
-        sprint_count=args.sprint_count,
-        total_distance=args.total_distance,
-        max_speed=args.max_speed,
-        touches_left=args.left_touches,
-        touches_right=args.right_touches
-        )
-
+        add_session(args, session_repo)
+    elif args.command == "list-sessions":
+        list_sessions(args, session_repo)
+    elif args.command == "delete-session":
+        delete_session(args, session_service)
+    elif args.command == "player-sessions":
+        list_player_sessions(args, session_repo)
 
     else:
         parser.print_help()
