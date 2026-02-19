@@ -1,4 +1,4 @@
-from fake_repos.sessions import FakeSessionRepo
+from fake_repos.fake_sessions import FakeSessionRepo
 
 def __init__(self, sessions=None):
     self.sessions = sessions or []
