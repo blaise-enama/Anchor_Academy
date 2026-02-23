@@ -39,13 +39,17 @@ class SessionRepository:
         
 
     
-    def get_player_sessions(self, player_id):
+    def get_player_sessions(self, player_id, name=None):
         """
         Queries sessions from a given player
         """
+        if player_id is None:
+            query = "SELECT * FROM sessions WHERE name = %s ORDER BY session_date DESC"
+            return execute_query(self.connection, query, (name), fetch=True)
+        
         query = "SELECT * FROM sessions WHERE player_id = %s ORDER BY session_date DESC"
-        return execute_query(self.connection, query, (player_id,), fetch=True)
-    
+        return execute_query(self.connection, query, (player_id), fetch=True)
+
     
     
     def delete_session(self, session_id):
@@ -94,6 +98,9 @@ class SessionRepository:
 
     
     def get_all(self):
+        """
+        A query to retrieve all sessions data
+        """
         query = """
             SELECT
                 session_id,
