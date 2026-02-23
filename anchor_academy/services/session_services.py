@@ -18,7 +18,7 @@ class SessionService:
     def __init__(self, sessionRepo: SessionRepository):
         self.sessionRepo = sessionRepo
         
-    def create_table(self, sessionRepo: SessionRepository):
+    def create_table(self):
         return self.sessionRepo.create_sessions_table()
     
     def add_session(self, player_id,session_date, duration_minutes, sprint_count, total_distance, max_speed, touches_left, touches_right):
@@ -36,6 +36,7 @@ class SessionService:
         touches_right= touches_right
         )
 
+        #"engineer a new feature in the session object for dominant foot usage"
         session.dominant_foot= self.dominant_ft(session)
         
         logging.info(f"session added to database for player {player_id}")
@@ -44,11 +45,14 @@ class SessionService:
     def list_sessions(self):
         return self.sessionRepo.get_all()
     
-    def list_player_sessions(self, player_id):
+    def list_player_sessions(self, player_id, name):
         if player_id is None or player_id == 0:
             raise ValueError("Invalid Player ID. Please enter a valid player ID")
+        if name is None:
+            raise ValueError(f"{name} is not found in the roster. Please enter an existing player.")
+        
                 
-        rows = self.sessionRepo.get_player_sessions(player_id)
+        rows = self.sessionRepo.get_player_sessions(player_id, name)
         sessions = []
         for row in rows:
             sessions.append(
@@ -61,7 +65,8 @@ class SessionService:
                 total_distance=row[5],
                 max_speed=row[6],
                 touches_left=row[7],
-                touches_right=row[8]
+                touches_right=row[8], 
+                dom_ft=row[9]
             )
             )
 
@@ -98,10 +103,12 @@ class SessionService:
 
                 
         """
-        if self.duration_minutes <= 0:
+        if session.duration_minutes <= 0:
             return 0.0
         
         distance_per_min = session.total_distance / session.duration_minutes
+
+        #normalize the number of sprints
         sprint_factor = session.sprint_count *10
 
         work_rate = distance_per_min + sprint_factor
@@ -142,3 +149,12 @@ class SessionService:
             return "left"
         else:
             return "balanced"
+
+
+    def performance_score(self,player):
+        """
+        Computes a performance score for a player by combining a multitude of metrics
+        Args:
+        player -> a player object. this can be added into a loop to iterate through a repository of players
+        """
+        pass
