@@ -1,11 +1,12 @@
 import argparse
 import logging
-from player_tracker import *
-from repositories.sessionRepo import SessionRepository
-from repositories.playerRepo import PlayerRepository
-from services.session_services import SessionService
-from services.player_service import PlayerService
-
+from anchor_academy.player_tracker import *
+from anchor_academy.repositories.sessionRepo import SessionRepository
+from anchor_academy.repositories.playerRepo import PlayerRepository
+from anchor_academy.services.session_services import SessionService
+from anchor_academy.services.player_service import PlayerService
+from fake_repos.players import FakePlayerRepo
+from fake_repos.fake_sessions import FakeSessionRepo
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -15,23 +16,17 @@ They should be used as a human entry point for data ingestion
 functions defined here Should call a respective PlayerService method 
 No object creation, no SQL logic, just handles user input"""
 
-def add_player(args, player_repo):
-
-    player_service = PlayerService(player_repo)
-
+def add_player(args, player_service):
     #call the add_player method from the service layer
-    player_service.add_player(
+   player = player_service.add_player(
         name=args.name,
         position=args.position, 
         age=args.age, 
         team=args.team
     )
-    #logging.info(f"Player added successfully under ID: {player_id}")
+   print(f"player added successfully (id={player})")
 
-
-def display_players(args, player_repo):
-    player_service= PlayerService(player_repo)
-
+def display_players(args, player_service):
     #trigger the service function to list players
     players = player_service.list_players()
     
@@ -43,8 +38,8 @@ def display_players(args, player_repo):
         print(
             f"ID: {player.player_id} | "
             f"Name: {player.name} | "
-            f"Position: {player.position} | "
             f"Age: {player.age} | "
+            f"Position: {player.position} | "
             f"Team: {player.team}"
         )
     
@@ -53,6 +48,25 @@ def delete_player(args, player_repo):
     player_service = PlayerService(player_repo)
     player_service.delete
     player_repo.delete_player(args.player_name)
+
+
+def locate_player(args, player_service):
+    try:
+        player = player_service.get_player(args.name)
+
+        if not player:
+            print(f"No player found with name '{args.name}'")
+            return
+        
+        print(
+            f"\nPlayer ID: {player.player_id} |"
+            f"Name: {player.name} |"
+            f"Age: {player.age} |"
+            f"Position: {player.position} |"
+            f"Team: {player.team} |"
+        )
+    except Exception as e:
+        print(f"Errors {e}")
 
 
 def add_session(args, session_repo):
@@ -112,25 +126,45 @@ def list_sessions(args, session_repo):
         )
 
 
-def list_player_sessions(args, sessionRepo):
-    session_service = SessionService(sessionRepo)
-    sessions = session_service.list_player_sessions(args.player_id)
+def list_player_sessions(args, player_service):
 
-    if not sessions:
-        print(f"No sessions found for player {args.player_id}")
-        return
-
-    for s in sessions:        
+    try:
+        player = player_service.get_player_with_sessions(
+            player_id=args.id,
+            name= args.name )
+        
+        # if player DNE, print a message
+        if not player:
+            print(f"No matching player found. Enter a valid player name or ID")
+            return
+        #otherwise, print the name and ID, followed by age, position, and team
         print(
-            f"Session ID: {s.session_id} | "
-            f"Date: {s.session_date} | "
-            f"Duration: {s.duration} min | "
-            f"Sprints: {s.sprints} |" 
-            f"Distance: {s.distance} m | "
-            f"Max Speed: {s.max_speed} |"
-            f"Left Touches: {s.touches_left} |"
-            f"Right Touches: {s.touches_right} |"
-        ) 
+            f"\nPlayer: {player.name} (ID: {player.player_id})\n"
+            f"Age: {player.age} | Position: {player.position} | Team: {player.team}\n"
+            f"{'-' * 43}"
+        )
+
+        #if no sessions are recorded for the player selected, print message
+        if not player.sessions:
+            print(f"No sessions recorded")
+            return
+        
+        for s in player.sessions:        
+            print(
+                f"Session ID: {s.session_id} | "
+                f"Date: {s.session_date} | "
+                f"Duration: {s.duration} min | "
+                f"Sprints: {s.sprints} | " 
+                f"Distance: {s.distance} m | "
+                f"Max Speed: {s.max_speed} | "
+                f"Left Touches: {s.touches_left} | "
+                f"Right Touches: {s.touches_right} |"
+            ) 
+
+    except Exception as e:
+        print(f"Error: {e}")
+    
+   # logging.info(f"Response type: {type(player.sessions)}")
 
 
 def delete_session(args, session_service):
@@ -153,9 +187,13 @@ def main():
     add_player_parser.add_argument("--team", required=True)
 
 
+    # ---- locate player ----
+    locate_player_parser= subparsers.add_parser("find-player", help="Find a player by name")
+    locate_player_parser.add_argument("--name", type=str, required=True, help="Full name of the player")
+
     # ---- Delete Player ----
     delete_player_parser = subparsers.add_parser("delete-player")
-    delete_player_parser.add_argument("--player-name", type=str, required=True)
+    delete_player_parser.add_argument("--name", type=str, required=True)
 
     # ---- List Players ----
     subparsers.add_parser("list-players")
@@ -183,8 +221,9 @@ def main():
     subparsers.add_parser("list-sessions", help="Display all sessions recorded for every player")
 
     #---- Display sessions by player ID -----
-    player_session_parser=subparsers.add_parser("player-sessions", help="Display all sessions recorded for a player")
-    player_session_parser.add_argument("--player_id", type=int, required=True)
+    player_session_parser=subparsers.add_parser("player-sessions", help="Display all sessions recorded for a player, along with their details.")
+    player_session_parser.add_argument("--id", type=int, required=False, help="Player ID")
+    player_session_parser.add_argument("--name", type=str, required=False,help="Player name")
 
 
     args = parser.parse_args()
@@ -193,15 +232,21 @@ def main():
     if not conn:
         return
     
-    player_repo = PlayerRepository(conn)
-    session_repo = SessionRepository(conn)
+    player_repo = FakePlayerRepo()
+    #PlayerRepository(conn)
+    session_repo = FakeSessionRepo()
+    #SessionRepository(conn)
+    session_repo._seed_sessions()
+
     session_service = SessionService(session_repo)
+    player_service = PlayerService(player_repo, session_repo)
 
     if args.command == "add-player":
         add_player(args, player_repo)
-
+    if args.command == "find-player":
+        locate_player(args, player_service)
     elif args.command == "list-players":
-        display_players(args,player_repo)
+        display_players(args,player_service)
     elif args.command == "delete-player":
         #automatically deletes a player as well as their sessions via cascade
         delete_player(args, player_repo)
@@ -212,7 +257,7 @@ def main():
     elif args.command == "delete-session":
         delete_session(args, session_service)
     elif args.command == "player-sessions":
-        list_player_sessions(args, session_repo)
+        list_player_sessions(args, player_service)
 
     else:
         parser.print_help()
