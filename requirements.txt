@@ -1,0 +1,10 @@
+# Core dependencies
+requests==2.31.0    #calls the Playermaker API
+pymysql==1.1.0      #connects to MySQL database
+python-dotenv==1.0.1    #securely loads environment variables from .env file( API keys, database credentials)
+
+# CLI / utilities (optional but useful)
+click==8.1.7
+
+# Testing
+pytest==8.2.0

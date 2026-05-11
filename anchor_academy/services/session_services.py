@@ -132,11 +132,18 @@ class SessionService:
         right_foot = session.touches_right
 
         total_touches = left_foot + right_foot
+        ratio = round(right_foot / total_touches,3)
 
         if total_touches == 0:
             return None 
+        if ratio >0.5:
+            logging.info(f"Player {session.player_id} has a dominant right foot during the session on {session.session_date}")
+        if ratio < 0.5:
+            logging.info(f"Player {session.player_id} has a dominant left foot during the session on {session.session_date}")
+        else:
+            logging.info(f"Player {session.player_id} has a balanced foot usage during the session on {session.session_date}")
         
-        return round(right_foot / total_touches, 3)
+        return ratio
 
     def dominant_ft(self, session):
         ratio = self.foot_usage_ratio(session)
