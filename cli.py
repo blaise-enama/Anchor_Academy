@@ -16,6 +16,47 @@ They should be used as a human entry point for data ingestion
 functions defined here Should call a respective PlayerService method 
 No object creation, no SQL logic, just handles user input"""
 
+def introduction():
+    print("Welcome to the Anchor Academy Player Tracker CLI!")
+    print("Use this tool to manage player profiles and training sessions.")
+    print("Type --help for a list of available commands.\n")
+    
+    """
+    Using input(), prompt the user to enter additional details (ie: database connection)
+    *if user has an existing database, prompt for credentials and connect to it
+    *if user does not have an existing database, prompt to create a new one with default Anchor Academy credentials (localhost, root, password, Anchor_Academy)
+    *if user does not have mysql installed, prompt to install mysql and create a database with
+    """
+
+
+def connect_to_database():
+    """
+    Establishes a connection to the MySQL database using credentials from environment variables.
+    Returns the connection object if successful, or None if there was an error.
+    """
+    try:
+        # Load database credentials from environment variables
+        db_host = os.getenv('DB_HOST', 'localhost')
+        db_user = os.getenv('DB_USER', 'root')
+        db_password = os.getenv('DB_PASSWORD', '')
+        db_name = os.getenv('DB_NAME', 'Anchor_Academy')
+
+        # Connect to the database
+        connection = pymysql.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        logging.info("Successfully connected to the database.")
+        return connection
+
+    except Exception as e:
+        logging.error(f"Error connecting to the database: {e}")
+        return None
+
+
 def add_player(args, player_service):
     #call the add_player method from the service layer
    player = player_service.add_player(
