@@ -24,3 +24,6 @@ class FakePlayerRepo:
                 return player
         return None
     
+    def get_roster(self):
+        return list(self.players.values())
+    
