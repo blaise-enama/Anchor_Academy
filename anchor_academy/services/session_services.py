@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from anchor_academy.player_tracker import Session
 from anchor_academy.repositories.sessionRepo import SessionRepository
+from fake_repos.fake_sessions import FakeSessionRepo    
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -45,14 +46,17 @@ class SessionService:
     def list_sessions(self):
         return self.sessionRepo.get_all()
     
-    def list_player_sessions(self, player_id, name):
-        if player_id is None or player_id == 0:
-            raise ValueError("Invalid Player ID. Please enter a valid player ID")
-        if name is None:
-            raise ValueError(f"{name} is not found in the roster. Please enter an existing player.")
+    def list_player_sessions(self, player_id=None, name=None):
+        if player_id is None and name is None:
+            logging.info(f"service received player_id: {player_id} and name: {name} from the repo")
+            raise ValueError("Invalid request. Please provide a valid player ID or name.")
+
+        #rows = self.FakeSessionRepo.list_sessions_by_player(player_id)        
+        rows = self.sessionRepo.get_player_sessions(
+            player_id=player_id, 
+            name=name)
+        print(f"Rows returned from repo: {rows}")
         
-                
-        rows = self.sessionRepo.get_player_sessions(player_id, name)
         sessions = []
         for row in rows:
             sessions.append(
