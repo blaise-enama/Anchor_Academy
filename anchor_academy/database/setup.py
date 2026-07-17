@@ -39,20 +39,19 @@ def connect_to_database():
 
 
 def initialize_anchor_academy():
-    print("Welcome to the Anchor Academy Player Tracker!")
-    print("Use this tool to manage player profiles and training sessions.")
-    print("Type --help for a list of available commands.\n")
-    
     """
     Using input(), prompt the user to enter additional details (ie: database connection)
     *if user has an existing database, prompt for credentials and connect to it
     *if user does not have an existing database, prompt to create a new one with default Anchor Academy credentials (localhost, root, password, Anchor_Academy)
     *if user does not have mysql installed, prompt to install mysql and create a database with
     """
+    """
     print("Before starting, please ensure that you have MySQL installed and running.")
     print("We're going to need some information in order to connect to your database.")
+    """
 
-    #prompt the user for database connection details
+    #prompt the user for database connection details... maybe in a while loop until they provide valid credentials or choose to create a new database
+    logging.info(f"Database connection triggered.") 
     database = input("Do you have an existing MySQL database for Anchor Academy? (yes/no): ").strip().lower()
     if database == "yes":
         db_host = input("Enter your database host (default: localhost): ") or "localhost"
@@ -81,7 +80,11 @@ def initialize_anchor_academy():
                 )
             conn.commit()
 
-            print("\n Database 'Anchor_Academy' is ready for use.")
+            print("Connecting to MySQL Server...")
+            print("Creating 'Anchor_Academy' database...")
+            print("Database 'Anchor_Academy' created successfully!")
+
+
             conn.close()
             
             #maybe explain the schema and tables that will be created in the database for the user to understand what is being set up
@@ -97,11 +100,9 @@ def initialize_anchor_academy():
         connection = connect_to_database()
 
         if connection:
-
-            logging.info(f" Successfully connected to Anchor_Academy database")
             print("\nSetup complete. You may now begin ingesting player data.")
 
-            connection.close()
+            #connection.close()
 
     else:
         print(" Unable to connect to the Anchor_Academy database")
