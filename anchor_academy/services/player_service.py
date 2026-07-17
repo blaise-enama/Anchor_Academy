@@ -1,5 +1,6 @@
 import logging
-from anchor_academy.player_tracker import *
+from anchor_academy.models.player_tracker import *
+from anchor_academy.models.session_metrics import SessionMetric
 from anchor_academy.repositories.playerRepo import PlayerRepository
 from anchor_academy.repositories.sessionRepo import SessionRepository
 from fake_repos.players import FakePlayerRepo
@@ -18,13 +19,20 @@ class PlayerService:
         """
         function to create and add a player object to the player repository
         """
+        print("Creating Player object...")
+        print(Player)
+        print(Player.__module__)
 
         #vaidate inputs
         if not name:
             raise ValueError("Player name is required. Try again")
+        if age is None:
+            raise ValueError("Player age is required. Try again")
         if age <= 10:
             raise ValueError("Player must be at least 10 years of age")
          
+        
+
         #create a domain object
         player = Player(
             name= name,
@@ -34,10 +42,12 @@ class PlayerService:
 
         )
         
+        #returns new player_id as None. 
         logging.info(f"Player {name} added to database with ID {player_id}")
 
         #call player_repo.add_player to add the player object into the player repository
-        return self.player_repo.add_player(player)
+        #add the player to the fake roster
+        return self.fake_roster.add_player(player)
     
     
     def get_player(self,player_name):
@@ -60,7 +70,8 @@ class PlayerService:
         """
         calls get_roster from the playerRepo
         """
-        rows = self.player_repo.get_roster()
+        #rows = self.player_repo.get_roster()
+        rows = self.fake_roster.get_roster()
 
         return [
             Player(
@@ -83,11 +94,13 @@ class PlayerService:
             raise ValueError("player_id or name must be provided")
         
         #If just player_id is provided, locate player by ID. Otherwise, locate them by name if provided
-        if player_id:
-            row = self.fake_roster.get_by_id(player_id)
+        if player_id is not None:
+            row = self.fake_roster.get_by_id(player_id) 
+            print(f"Roster lookup returned: {row}")
             #self.player_repo.fetch_by_id(player_id)
         else:
             row = self.fake_roster.get_by_name(name)
+            print(f"Roster lookup returned: {row}")
             #self.player_repo.locate_player(name)
 
         #IF neither are provided, return none
@@ -110,20 +123,36 @@ class PlayerService:
         #self.session_repo.get_player_sessions(player.player_id)
 
         #iterate through the session objects, and store a list of sessions 
-        player.sessions = [
-            Session(
+        player.sessions = []
+
+        for s in sessions:
+
+            session = Session(
                 session_id=s[0],
                 player_id=s[1],
                 session_date=s[2],
-                duration_minutes=s[3],
-                total_distance=s[4],
-                sprint_count=s[5],
-                max_speed=s[6],
-                touches_left=s[7],
-                touches_right=s[8]
+                duration_minutes=s[3]
             )
-            for s in sessions
-        ]
 
-        return player
+            session.add_metric(
+                SessionMetric("total_distance", s[4], "m")
+            )
+
+            session.add_metric(
+                SessionMetric("sprints", s[5], "count")
+            )
+
+            session.add_metric(
+                SessionMetric("max_speed", s[6], "km/h")
+            )
+
+            session.add_metric(
+                SessionMetric("touches_left", s[7], "touches")
+            )
+
+            session.add_metric(
+                SessionMetric("touches_right", s[8], "touches")
+            )
+
+            player.sessions.append(session)
 
