@@ -1,14 +1,16 @@
 import argparse
 import logging
-from anchor_academy.player_tracker import *
+from anchor_academy.models.player_tracker import *
 from anchor_academy.repositories.sessionRepo import SessionRepository
 from anchor_academy.repositories.playerRepo import PlayerRepository
 from anchor_academy.services.session_services import SessionService
 from anchor_academy.services.player_service import PlayerService
 from fake_repos.players import FakePlayerRepo
 from fake_repos.fake_sessions import FakeSessionRepo
+from anchor_academy.database.setup import connect_to_database, initialize_anchor_academy    
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 """
 CLI is used for triggering the system behavior upon [user] request. 
@@ -16,56 +18,45 @@ They should be used as a human entry point for data ingestion
 functions defined here Should call a respective PlayerService method 
 No object creation, no SQL logic, just handles user input"""
 
-def introduction():
-    print("Welcome to the Anchor Academy Player Tracker CLI!")
-    print("Use this tool to manage player profiles and training sessions.")
-    print("Type --help for a list of available commands.\n")
     
-    """
-    Using input(), prompt the user to enter additional details (ie: database connection)
-    *if user has an existing database, prompt for credentials and connect to it
-    *if user does not have an existing database, prompt to create a new one with default Anchor Academy credentials (localhost, root, password, Anchor_Academy)
-    *if user does not have mysql installed, prompt to install mysql and create a database with
-    """
-
-
-def connect_to_database():
-    """
-    Establishes a connection to the MySQL database using credentials from environment variables.
-    Returns the connection object if successful, or None if there was an error.
-    """
-    try:
-        # Load database credentials from environment variables
-        db_host = os.getenv('DB_HOST', 'localhost')
-        db_user = os.getenv('DB_USER', 'root')
-        db_password = os.getenv('DB_PASSWORD', '')
-        db_name = os.getenv('DB_NAME', 'Anchor_Academy')
-
-        # Connect to the database
-        connection = pymysql.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database=db_name,
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        logging.info("Successfully connected to the database.")
-        return connection
-
-    except Exception as e:
-        logging.error(f"Error connecting to the database: {e}")
-        return None
 
 
 def add_player(args, player_service):
     #call the add_player method from the service layer
-   player = player_service.add_player(
-        name=args.name,
-        position=args.position, 
-        age=args.age, 
-        team=args.team
-    )
-   print(f"player added successfully (id={player})")
+
+    print("Adding a new player to the roster...")
+    logging.debug(f"Received arguments: name={args.name}, age={args.age}, position={args.position}, team={args.team}")
+
+    try:
+        name= args.name
+        age = args.age
+        position = args.position
+        team = args.team
+
+        if not name:
+            name = input("Player Name: ").strip()
+
+        if age is None:
+            age = int(input("Player Age: "))
+
+        if not position:
+            position = input("Player Position: ").strip()
+
+        if not team:
+            team = input("Player Team: ").strip()
+
+        player_id = player_service.add_player(
+            name=name,
+            position=position, 
+            age=age, 
+            team=team
+        )
+        logging.info(f"Player {name} added successfully with ID {player_id}!")
+        print(f"Player ID: {player_id} | Name: {name} | Age: {age} | Position: {position} | Team: {team} added successfully!")
+    except Exception as e:
+        logging.error(f"Error adding player: {e}")
+        print(f"Error adding player: {e}")
+
 
 def display_players(args, player_service):
     #trigger the service function to list players
@@ -167,17 +158,32 @@ def list_sessions(args, session_repo):
         )
 
 
+def build_session_report(session):
+        return {
+        "session_id": session.session_id,
+        "date": session.session_date,
+        "distance": session.total_distance,
+        "sprints": session.sprint_count,
+        "max_speed": session.max_speed,
+        "touches_left": session.touches_left,
+        "touches_right": session.touches_right,
+        "dominant_foot": session.dominant_foot
+    }
+
+
 def list_player_sessions(args, player_service):
 
     try:
         player = player_service.get_player_with_sessions(
-            player_id=args.id,
+            player_id=args.player_id,
             name= args.name )
+        print(player)
         
         # if player DNE, print a message
         if not player:
             print(f"No matching player found. Enter a valid player name or ID")
             return
+        
         #otherwise, print the name and ID, followed by age, position, and team
         print(
             f"\nPlayer: {player.name} (ID: {player.player_id})\n"
@@ -191,20 +197,20 @@ def list_player_sessions(args, player_service):
             return
         
         for s in player.sessions:        
+            report = build_session_report(s)
             print(
-                f"Session ID: {s.session_id} | "
-                f"Date: {s.session_date} | "
-                f"Duration: {s.duration} min | "
-                f"Sprints: {s.sprints} | " 
-                f"Distance: {s.distance} m | "
-                f"Max Speed: {s.max_speed} | "
-                f"Left Touches: {s.touches_left} | "
-                f"Right Touches: {s.touches_right} |"
-            ) 
+                f"Session ID: {report['session_id']} | "
+                f"Date: {report['date']} | "
+                f"Distance: {report['distance']} m | "
+                f"Sprints: {report['sprints']} | "
+                f"Max Speed: {report['max_speed']} km/h | "
+                f"Touches Left: {report['touches_left']} | "
+                f"Touches Right: {report['touches_right']} | "
+                f"Dominant Foot: {report['dominant_foot']} | "
+            )
 
     except Exception as e:
-        print(f"Error: {e}")
-    
+        print(f"Error: {e}")    
    # logging.info(f"Response type: {type(player.sessions)}")
 
 
@@ -219,14 +225,17 @@ def delete_session(args, session_service):
 def main():
     parser = argparse.ArgumentParser(description= "Player Tracker CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    
 
     #------- Add Player -------
-    add_player_parser = subparsers.add_parser("add-player")
-    add_player_parser.add_argument("--name", type=str, required=True)
-    add_player_parser.add_argument("--position", type=str, required=True)
-    add_player_parser.add_argument("--age", type=int, required=True)
-    add_player_parser.add_argument("--team", required=True)
+    add_player_parser = subparsers.add_parser("add-player", help="Add a player to the roster")
+    add_player_parser.add_argument("--name")
+    add_player_parser.add_argument("--position")
+    add_player_parser.add_argument("--age", type=int)
+    add_player_parser.add_argument("--team")
 
+    #------ Setup Database ------
+    subparsers.add_parser("setup", help="Setup the Anchor Academy database")
 
     # ---- locate player ----
     locate_player_parser= subparsers.add_parser("find-player", help="Find a player by name")
@@ -262,12 +271,27 @@ def main():
     subparsers.add_parser("list-sessions", help="Display all sessions recorded for every player")
 
     #---- Display sessions by player ID -----
-    player_session_parser=subparsers.add_parser("player-sessions", help="Display all sessions recorded for a player, along with their details.")
-    player_session_parser.add_argument("--id", type=int, required=False, help="Player ID")
+    player_session_parser= subparsers.add_parser("player-sessions", help="Display all sessions recorded for a player, along with their details.")
+    player_session_parser.add_argument("--id", dest="player_id", type=int, required=False, help="Player ID")
     player_session_parser.add_argument("--name", type=str, required=False,help="Player name")
 
+    
+    print("Welcome to the Anchor Academy Player Tracker!")
+    print("Your one stop tool for managing player profiles and tracking their training progress.")
+    print("We track player development by recording their training sessions and analyzing their performance metrics.")
 
-    args = parser.parse_args()
+    print("Use this tool to improve your players' performance and help them reach their full potential through data-driven insights and analytics.")
+    print("Type --help at any time for a list of available commands.\n")
+    print("You can type 'exit' at any time to exit the CLI and return to the main menu.\n")
+    print("------------------------------------------------------------------------------------------------------------------------------------ \n")
+
+    input("Before starting, please ensure that you have MySQL installed and running. Press any key to continue...")
+    input("\nLet's get started! Press the Enter key to continue")
+    print("\nWe're going to need some information in order to connect to your database.\n")
+
+    initialize_anchor_academy() # Initialize the Anchor Academy database and connect to it
+
+    
     
     conn = connect_to_database()
     if not conn:
@@ -280,30 +304,63 @@ def main():
     session_repo._seed_sessions()
 
     session_service = SessionService(session_repo)
-    player_service = PlayerService(player_repo, session_repo)
+    player_service = PlayerService(
+        player_repo, session_repo)
 
-    if args.command == "add-player":
-        add_player(args, player_repo)
-    if args.command == "find-player":
-        locate_player(args, player_service)
-    elif args.command == "list-players":
-        display_players(args,player_service)
-    elif args.command == "delete-player":
-        #automatically deletes a player as well as their sessions via cascade
-        delete_player(args, player_repo)
-    elif args.command == "add-session":
-        add_session(args, session_repo)
-    elif args.command == "list-sessions":
-        list_sessions(args, session_repo)
-    elif args.command == "delete-session":
-        delete_session(args, session_service)
-    elif args.command == "player-sessions":
-        list_player_sessions(args, player_service)
+    while True:
+        #initialize_anchor_academy() # Initialize the Anchor Academy database and connect to it
+        command = input("Anchor Academy >").strip()
+        if command == "" or command == "exit":
+            print("Exiting Anchor Academy CLI. Goodbye!")
+            break
 
-    else:
-        parser.print_help()
+        command_args = command.split()
+        
+        # Parse the command line arguments
+        args = parser.parse_args(command_args)
 
-    conn.close()
+        try:
+            """if args.command == "setup":
+                initialize_anchor_academy()"""
+            if args.command == "add-player":
+                logging.debug(f"Calling add_player with arguments: name={args.name}, age={args.age}, position={args.position}, team={args.team}")
+                add_player(args, player_service)
+
+            elif args.command == "find-player":
+                locate_player(args, player_service)
+
+            elif args.command == "list-players":
+                display_players(args,player_service)
+
+            elif args.command == "delete-player":
+                #automatically deletes a player as well as their sessions via cascade
+                delete_player(args, player_repo)
+
+            elif args.command == "add-session":
+                add_session(args, session_repo)
+
+            elif args.command == "list-sessions":
+                list_sessions(args, session_repo)
+
+            elif args.command == "delete-session":
+                delete_session(args, session_service)
+
+            elif args.command == "player-sessions":
+                print(args)
+                print(f"Fetching sessions for player ID: {args.player_id} and name: {args.name}")
+                list_player_sessions(args, player_service)
+                #sessions = session_service.list_player_sessions(player_id=args.player_id, name=args.name)  
+            elif args.command == "help":
+                parser.print_help()
+
+            else:
+                break
+
+        except Exception as e:
+            print(f"Error: {e}")
+            logging.error(f"Error executing command '{args.command}': {e}")
+
+    #conn.close()
 
 if __name__ == "__main__":
     main()
