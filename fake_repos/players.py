@@ -15,8 +15,10 @@ class FakePlayerRepo:
         }
 
     def get_by_id(self, player_id):
-        return self.players.get(player_id)
-    
+        for player in self.players.values():
+            if player[0] == player_id:
+                return player
+        return None    
 
     def get_by_name(self, name):
         for player in self.players.values():
@@ -26,4 +28,14 @@ class FakePlayerRepo:
     
     def get_roster(self):
         return list(self.players.values())
+    
+    
+    def add_player(self, player: Player):
+        """
+        adds a player object to the repository 
+        runs SQL and stores data. 
+        """
+        new_id = max(self.players.keys()) + 1
+        self.players[new_id] = (new_id, player.name, player.position, player.age, player.team)
+        return new_id
     
