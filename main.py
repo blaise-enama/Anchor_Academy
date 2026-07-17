@@ -1,25 +1,70 @@
-from player_tracker import *
+from anchor_academy.player_tracker import *
+from anchor_academy.database.setup import connect_to_database, initialize_anchor_academy
+from anchor_academy.repositories.playerRepo import PlayerRepository
+from fake_repos.fake_sessions import FakeSessionRepo
+from fake_repos.players import FakePlayerRepo
+from cli import *
+
+
 from datetime import datetime, date
 
 def main():
     """
-    this main function creates a player/ multiple players, and a training session for that player. 
-    player ID is auto-fetched using cursor.lastrowid to ensure that the session is linked to the correct player
+    Tests the database connection, and the functionality of the Player and Session classes.
     """
     # Establish a connection with the current Anchor_Academy Database
     # connection = connect_to_database('localhost','root', 'Enamfam.7', 'Anchor_Academy') #Using mysql-connector-python
 
+    initialize_anchor_academy()  # Initialize the Anchor Academy database and connect to it
+
     conn = connect_to_database()
-    if not conn:
-        return
+    if conn:
 
-    #create repositories
-    player_repo = PlayerRepository(conn)
-    session_repo = SessionRepository(conn)
+        print("Successfully connected to the Anchor_Academy database.")
+        print("Anchor Academy is now ready for use. You can now proceed to add players and sessions.")
 
-    player_repo.get_roster()
+        try:
+                with conn.cursor() as cursor:
+
+                    # Simple test query
+                    cursor.execute("SELECT DATABASE();")
+
+                    result = cursor.fetchone()
+
+                    cursor.execute("SELECT * FROM roster;")
+                    #roster = cursor.fetchall()
+
+                    print(f"\nConnected Database: {result['DATABASE()']}")
+                    #print(f"Roster Data: {roster}")
+
+        except Exception as e:
+            logging.info(f"Error running test query: {e}")
+
+        finally:
+            conn.close()
+            logging.info(f"Database connection closed")
+
+    else:
+        logging.info(f"Failed to connect to database")
+
     
-    conn.close()
+    #instantiate the player and session repositories
+    #player_repo = PlayerRepository(conn)
+
+    player_repo = FakePlayerRepo()
+    session_repo =FakeSessionRepo()
+
+    #Generate the fake sessions data 
+    session_repo._seed_sessions()
+
+    #prompt user to transition to the CLI for further interaction with the application
+    print("\nWe will now transition you to the CLI for further interaction with the application.")  
+
+    
+
+
+
+
 """
 
     # Create Player instance
