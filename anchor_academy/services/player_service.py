@@ -9,11 +9,11 @@ from fake_repos.fake_sessions import FakeSessionRepo
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 class PlayerService:
-    def __init__(self,fake_playerRepo: FakePlayerRepo, fake_sessionRepo:FakeSessionRepo):
-        #self.player_repo = playerRepo
-        #self.session_repo = sessionRepo
-        self.fake_roster = fake_playerRepo
-        self.fake_sessions = fake_sessionRepo
+    def __init__(self,playerRepo: PlayerRepository, sessionRepo: SessionRepository):
+        self.player_repo = playerRepo
+        self.session_repo = sessionRepo
+        """self.fake_roster = fake_playerRepo
+        self.fake_sessions = fake_sessionRepo"""
 
     def add_player(self,name:str, age:int, position:str , team:str, player_id=None):
         """
@@ -23,7 +23,7 @@ class PlayerService:
         print(Player)
         print(Player.__module__)
 
-        #vaidate inputs
+        #validate inputs
         if not name:
             raise ValueError("Player name is required. Try again")
         if age is None:
@@ -33,7 +33,7 @@ class PlayerService:
          
         
 
-        #create a domain object
+        #create a domain Player object
         player = Player(
             name= name,
             age=age,
@@ -41,13 +41,13 @@ class PlayerService:
             team= team
 
         )
-        
-        #returns new player_id as None. 
-        logging.info(f"Player {name} added to database with ID {player_id}")
+                
 
-        #call player_repo.add_player to add the player object into the player repository
-        #add the player to the fake roster
-        return self.fake_roster.add_player(player)
+        player = self.player_repo.add_player(player)
+        logging.info(f"Player {player.name} added to database with ID {player.player_id}")
+
+        return player       
+    
     
     
     def get_player(self,player_name):
@@ -68,21 +68,27 @@ class PlayerService:
 
     def list_players(self):
         """
-        calls get_roster from the playerRepo
+        calls get_roster from the playerRepo and turns each row into a domain player object
         """
-        #rows = self.player_repo.get_roster()
-        rows = self.fake_roster.get_roster()
+        rows = self.player_repo.get_roster()
+        #rows = self.fake_roster.get_roster()
 
-        return [
-            Player(
-                player_id=r[0],
-                name=r[1],
-                age=r[3],
-                position=r[2],
-                team=r[4]
+        #initialize a list of player objects
+        roster = []
+        for r in rows:
+            roster.append(
+                Player(
+                    player_id=r["player_id"],
+                    name=r["name"],
+                    position=r["position"],
+                    age=r["age"],
+                    team=r["team"]
+                )
             )
-            for r in rows
-        ]
+            
+        return roster
+
+    
     
 
     def get_player_with_sessions(self, *, player_id=None, name=None):
