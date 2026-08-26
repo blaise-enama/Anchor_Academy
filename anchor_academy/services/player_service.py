@@ -1,9 +1,10 @@
 import logging
+from os import name
 from anchor_academy.models.player_tracker import *
 from anchor_academy.models.session_metrics import SessionMetric
 from anchor_academy.repositories.playerRepo import PlayerRepository
 from anchor_academy.repositories.sessionRepo import SessionRepository
-from fake_repos.players import FakePlayerRepo
+from fake_repos.fake_roster import FakePlayerRepo
 from fake_repos.fake_sessions import FakeSessionRepo
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -12,12 +13,14 @@ class PlayerService:
     def __init__(self,playerRepo: PlayerRepository, sessionRepo: SessionRepository):
         self.player_repo = playerRepo
         self.session_repo = sessionRepo
-        """self.fake_roster = fake_playerRepo
-        self.fake_sessions = fake_sessionRepo"""
+        #self.fake_roster = fakeRoster
+        #self.fake_sessions = fake_sessionRepo
 
-    def add_player(self,name:str, age:int, position:str , team:str, player_id=None):
+    def add_player(self,name:str, age:int, position:str , team:str, player_id=None)->Player:
         """
         function to create and add a player object to the player repository
+
+        returns a player object with the same parameters in the definition
         """
         print("Creating Player object...")
         print(Player)
@@ -70,11 +73,12 @@ class PlayerService:
         """
         calls get_roster from the playerRepo and turns each row into a domain player object
         """
+        #depending on if the user is using a real database, the different rosters should be called
+        #try appending the roster to a real database connection
         rows = self.player_repo.get_roster()
-        #rows = self.fake_roster.get_roster()
-
         #initialize a list of player objects
         roster = []
+
         for r in rows:
             roster.append(
                 Player(
@@ -162,3 +166,15 @@ class PlayerService:
 
             player.sessions.append(session)
 
+
+    def delete_player(self, player_id):
+        if player_id is None:
+            raise ValueError("Player ID is required. Enter a valid ID to delete player from the database.")
+        
+        player = self.player_repo.fetch_by_id(player_id)
+
+        if player is None:
+            raise RuntimeError(
+                f"Player with ID {player_id} does not exist."
+            )
+        self.player_repo.delete_player(player_id)
