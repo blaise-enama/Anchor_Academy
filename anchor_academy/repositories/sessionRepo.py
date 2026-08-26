@@ -1,4 +1,4 @@
-from anchor_academy.player_tracker import *
+from anchor_academy.models.player_tracker import *
 """
 The services layer decides what SHOULD happen.
 It services the CLI and "talks" to the database
@@ -39,16 +39,44 @@ class SessionRepository:
         
 
     
-    def get_player_sessions(self, player_id, name=None):
+    def get_player_sessions(self, player_id=None, name=None):
         """
         Queries sessions from a given player
         """
+        logging.info(f"Repo received player_id: {player_id} and name: {name} from the service")
+        if player_id is None and name is None:
+            raise ValueError("Either player_id or name must be provided")
+
         if player_id is None:
-            query = "SELECT * FROM sessions WHERE name = %s ORDER BY session_date DESC"
-            return execute_query(self.connection, query, (name), fetch=True)
+            query = """
+            SELECT * 
+            FROM sessions 
+            WHERE player_id = (
+                SELECT player_id 
+                FROM roster 
+                WHERE name = %s
+            )
+            ORDER BY session_date DESC
+            """
+            return execute_query(self.connection, query, (name,), fetch=True)
         
-        query = "SELECT * FROM sessions WHERE player_id = %s ORDER BY session_date DESC"
-        return execute_query(self.connection, query, (player_id), fetch=True)
+        query = """
+        SELECT 
+            session_id,
+            player_id,
+            session_date,
+            duration_minutes,
+            sprint_count,
+            total_distance,
+            max_speed,
+            touches_left,
+            touches_right
+        FROM sessions 
+        WHERE player_id = %s 
+        ORDER BY session_date DESC
+        """
+        
+        return execute_query(self.connection, query, (player_id,), fetch=True)
 
     
     
