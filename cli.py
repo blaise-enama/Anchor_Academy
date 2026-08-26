@@ -5,7 +5,7 @@ from anchor_academy.repositories.sessionRepo import SessionRepository
 from anchor_academy.repositories.playerRepo import PlayerRepository
 from anchor_academy.services.session_services import SessionService
 from anchor_academy.services.player_service import PlayerService
-from fake_repos.players import FakePlayerRepo
+from fake_repos.fake_roster import FakePlayerRepo
 from fake_repos.fake_sessions import FakeSessionRepo
 from anchor_academy.database.setup import connect_to_database, initialize_anchor_academy    
 
@@ -45,14 +45,16 @@ def add_player(args, player_service):
         if not team:
             team = input("Player Team: ").strip()
 
-        player_id = player_service.add_player(
+        # Call the player service to add the player
+        player = player_service.add_player(
             name=name,
             position=position, 
             age=age, 
             team=team
         )
-        logging.info(f"Player {name} added successfully with ID {player_id}!")
-        print(f"Player ID: {player_id} | Name: {name} | Age: {age} | Position: {position} | Team: {team} added successfully!")
+        logging.info(f"Player {player.name} added successfully with ID {player.player_id}!")
+        print(f"Player ID: {player.player_id} | Name: {player.name} | Age: {player.age} | Position: {player.position} | Team: {player.team} added successfully!")
+
     except Exception as e:
         logging.error(f"Error adding player: {e}")
         print(f"Error adding player: {e}")
@@ -74,12 +76,22 @@ def display_players(args, player_service):
             f"Position: {player.position} | "
             f"Team: {player.team}"
         )
+    logging.info(f"Displayed {len(players)} players from the roster.")
+    logging.info(f"Response type: {type(players)}")
     
 
-def delete_player(args, player_repo):
-    player_service = PlayerService(player_repo)
-    player_service.delete
-    player_repo.delete_player(args.player_name)
+def delete_player(args, player_service):
+    try:
+        player_id = args.player_id
+
+        if player_id is None:
+            player_id = int(input("Player ID: "))
+
+        player_service.delete_player(player_id)
+        logging.info(f"Player {player_id} has been successfully deleted.")
+    
+    except Exception as e:
+        print(f"Error deleting player: {e}")
 
 
 def locate_player(args, player_service):
@@ -242,8 +254,8 @@ def main():
     locate_player_parser.add_argument("--name", type=str, required=True, help="Full name of the player")
 
     # ---- Delete Player ----
-    delete_player_parser = subparsers.add_parser("delete-player")
-    delete_player_parser.add_argument("--name", type=str, required=True)
+    delete_player_parser = subparsers.add_parser("delete-player", help= "Delete a player from the roster")
+    delete_player_parser.add_argument("--id", dest="player_id", type=str, required=False, help= "Player ID")
 
     # ---- List Players ----
     subparsers.add_parser("list-players")
@@ -281,31 +293,46 @@ def main():
     print("We track player development by recording their training sessions and analyzing their performance metrics.")
 
     print("Use this tool to improve your players' performance and help them reach their full potential through data-driven insights and analytics.")
-    print("Type --help at any time for a list of available commands.\n")
-    print("You can type 'exit' at any time to exit the CLI and return to the main menu.\n")
+
     print("------------------------------------------------------------------------------------------------------------------------------------ \n")
 
     input("Before starting, please ensure that you have MySQL installed and running. Press any key to continue...")
     input("\nLet's get started! Press the Enter key to continue")
-    print("\nWe're going to need some information in order to connect to your database.\n")
+    
+    use_real_db = input("Do you want to connect to a real database? (yes/no) [no]: ").strip().lower() =="yes"
+    conn = None
 
-    initialize_anchor_academy() # Initialize the Anchor Academy database and connect to it
+    if use_real_db:
+        # Try to create DB schema if needed and then connect interactively (prompts for credentials)
+        initialized = initialize_anchor_academy()  # uses env variabless if provided
 
+        if not initialized:
+            print("Database initialization failed or could not be completed.")
+            choice = input("Continue in demo mode with in-memory data? (yes/no) [yes]: ").strip().lower() or "yes"
+            if choice != "yes":
+                print("Exiting. Goodbye!")
+                return
+        # Try interactive connection (prompts for host/port/user/pass if required)
+        conn = connect_to_database(interactive=True)
+        if not conn:
+            print("Could not connect to the database. Falling back to demo mode with fake repositories.")
     
-    
-    conn = connect_to_database()
-    if not conn:
-        return
-    
-    player_repo = FakePlayerRepo()
-    #PlayerRepository(conn)
-    session_repo = FakeSessionRepo()
-    #SessionRepository(conn)
-    session_repo._seed_sessions()
+    else:
+        #User entered "[no] to use_real_db"
+        print("Running in demo mode with in-memory fake repositories.")
+
+    if conn:
+        player_repo = PlayerRepository(conn)
+        session_repo = SessionRepository(conn)
+
+    else:
+        player_repo = FakePlayerRepo()
+        session_repo = FakeSessionRepo()
+        session_repo._seed_sessions() #keep the demo data for interactive use
+
 
     session_service = SessionService(session_repo)
-    player_service = PlayerService(
-        player_repo, session_repo)
+    player_service = PlayerService(player_repo, session_repo)
 
     while True:
         #initialize_anchor_academy() # Initialize the Anchor Academy database and connect to it
@@ -325,6 +352,18 @@ def main():
             if args.command == "add-player":
                 logging.debug(f"Calling add_player with arguments: name={args.name}, age={args.age}, position={args.position}, team={args.team}")
                 add_player(args, player_service)
+                """save_player = input("Player added successfully! Would you like to save the player to the database? (yes/no): ").strip().lower()
+                if save_player == "yes":
+
+                    player_id = args.player_id,
+                    name=args.name,
+                    position=args.position, 
+                    age=args.age, 
+                    team=args.team"""
+                
+                logging.info(f"Player {args.name} saved successfully with ID {args.player_id}!")
+                print(f"Player ID: {args.player_id} | Name: {args.name} | Age: {args.age} | Position: {args.position} | Team: {args.team} saved successfully!")
+
 
             elif args.command == "find-player":
                 locate_player(args, player_service)
@@ -334,7 +373,7 @@ def main():
 
             elif args.command == "delete-player":
                 #automatically deletes a player as well as their sessions via cascade
-                delete_player(args, player_repo)
+                delete_player(args, player_service)
 
             elif args.command == "add-session":
                 add_session(args, session_repo)
@@ -357,8 +396,8 @@ def main():
                 break
 
         except Exception as e:
+            logging.error(f"Error executing command '{args.command}'")
             print(f"Error: {e}")
-            logging.error(f"Error executing command '{args.command}': {e}")
 
     #conn.close()
 
