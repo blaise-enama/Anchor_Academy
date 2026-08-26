@@ -304,6 +304,7 @@ def main():
 
     if use_real_db:
         # Try to create DB schema if needed and then connect interactively (prompts for credentials)
+        logging.info(f"Default Databse setup")
         initialized = initialize_anchor_academy()  # uses env variabless if provided
 
         if not initialized:
@@ -312,8 +313,10 @@ def main():
             if choice != "yes":
                 print("Exiting. Goodbye!")
                 return
-        # Try interactive connection (prompts for host/port/user/pass if required)
-        conn = connect_to_database(interactive=True)
+            
+        # Assuming initialization passed, Try interactive connection (prompts for host/port/user/pass if required)
+        logging.info(f"real DB interactive mode triggered.")
+        conn = connect_to_database(interactive=False)
         if not conn:
             print("Could not connect to the database. Falling back to demo mode with fake repositories.")
     
@@ -326,6 +329,7 @@ def main():
         session_repo = SessionRepository(conn)
 
     else:
+        #there's no connection to a database(demo)
         player_repo = FakePlayerRepo()
         session_repo = FakeSessionRepo()
         session_repo._seed_sessions() #keep the demo data for interactive use
