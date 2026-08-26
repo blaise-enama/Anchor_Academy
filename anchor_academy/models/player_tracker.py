@@ -12,42 +12,6 @@ from typing import List, Optional
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 
-def connect_to_database():
-    load_dotenv()   # Loads .env file
-
-    host_name = os.getenv("DB_HOST")
-    user_name = os.getenv("DB_USER")
-    user_password = os.getenv("DB_PASSWORD")
-    database = os.getenv("DB_NAME")
-    driver = os.getenv("DB_DRIVER", "pymysql")
-
-    conn = None
-    try:
-        if driver == 'mysql-connector':
-            conn = mysql.connector.connect(
-                host=host_name,
-                user=user_name,
-                passwd= user_password,
-                db= database
-            )
-        elif driver == 'pymysql':
-            conn = pymysql.connect(
-                host=host_name,
-                user=user_name,
-                passwd= user_password,
-                db= database
-            )
-        else:
-            raise ValueError("Unsupported driver. Use 'mysql-connector' or 'pymysql'.")
-        
-        logging.info("MySQL Database connection successful!") 
-    
-    except Exception as e:
-        logging.info(f"Error while connecting to MySQL: {e}")
-        conn = None
-
-    return conn
-
 
 def execute_query(conn,query, params=None, fetch=False):
     """
@@ -62,7 +26,7 @@ def execute_query(conn,query, params=None, fetch=False):
     do i need this function if I can just run cursor.execute("SELECT...;")
     """
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(dictionary=True) as cursor:
             cursor.execute(query, params)
             if fetch:
                 logging.info("SELECT query executed")
@@ -84,9 +48,10 @@ def get_mysql_csv(table):
     Parameters:
     table: the name of the mysql table that is to be specified upon calling the function
     """
+    
     try:
         #Create a database engine
-        db_connection_str = 'mysql+pymysql://root:Enamfam.7@localhost/Anchor_academy'
+        db_connection_str ='mysql+pymysql://root:Enamfam.7@localhost/Anchor_academy'
         db_connection = create_engine(db_connection_str)
 
         #Define the table and output CSV file
@@ -108,14 +73,12 @@ class Player:
     #initialize attributes of the player object
     def __init__(self,
                  player_id: Optional[int] = None,
-                 external_player_id: Optional[str] = None,
                  name: str = '',
-                 age: Optional[int] = None, 
-                 position: Optional[str] = None,
-                 team: Optional[str] = None
+                 age: int = 0, 
+                 position: str = '',
+                 team: str = ''
         ):
         self.player_id = player_id
-        self.external_playe_id = external_player_id
         self.name = name
         self.age = age 
         self.position = position
@@ -157,6 +120,7 @@ class Player:
                   s.touches_left, s.touches_right, s.accels, s.decels, s.duration, s.fatigue))
         conn.commit()
         #player_id = cursor.lastrowid
+        return cursor.lastrowid
 
 
 
@@ -215,14 +179,12 @@ class Session:
     """
     def __init__(self, 
                  session_id: Optional[int] = None,
-                 external_session_id: Optional[str] = None,
                  player_id: Optional[int] = None,
                  session_type: Optional[str] = None,
                  session_date: Optional[datetime] = None, 
                  duration_minutes: Optional[int] = None,
      ):
         self.session_id= session_id
-        self.external_session_id = external_session_id
         self.player_id = player_id
         self.session_type = session_type
         self.session_date = session_date
