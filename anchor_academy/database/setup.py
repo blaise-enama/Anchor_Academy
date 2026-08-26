@@ -87,14 +87,14 @@ def connect_to_database(interactive: bool = False) -> Optional[pymysql.connectio
         (prompts the user for mysql database credentials) 
         """
         while True:
-            #print("\n--- Database connection setup ---")
+            print("\n--- Database connection setup ---")
             #host, port, db_name, user, password = prompt_for_db_credentials()
 
             try:
                 #connect to the database using the above credentials
                 conn = try_connect(host, port, user, password, database=db_name)
                 logging.info("Connected to database successfully.")
-                logging.info("")
+                logging.info("interactive connection passed.")
                 return conn
             
             except MySQLError as e:
