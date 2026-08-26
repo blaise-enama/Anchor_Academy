@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from anchor_academy.player_tracker import Session
+from anchor_academy.models.player_tracker import Session
 from anchor_academy.repositories.sessionRepo import SessionRepository
 from fake_repos.fake_sessions import FakeSessionRepo    
 
@@ -12,7 +12,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 Session service is designed to:
 *parse the session date
 *Create a Session object
-*Compute work rate and other metrics
+*Compute work rate and other engineered metrics/features
+    (ie: sprint_density, ACWR, touch_balance, performance_score...)
 * Call the Session Respository
 """
 class SessionService:
@@ -121,7 +122,7 @@ class SessionService:
         return round(work_rate, 2)
     
 
-    def foot_usage_ratio(self, session):
+    def calculate_touch_balance(self, session):
         """
         a method for determining the ratio of touches between left and right 
         Returns right-foot usage ratio
@@ -139,6 +140,7 @@ class SessionService:
         ratio = round(right_foot / total_touches,3)
 
         if total_touches == 0:
+            logging.info(f"Player {session.player_id} needs to touch the ball more.")
             return None 
         if ratio >0.5:
             logging.info(f"Player {session.player_id} has a dominant right foot during the session on {session.session_date}")
@@ -150,7 +152,7 @@ class SessionService:
         return ratio
 
     def dominant_ft(self, session):
-        ratio = self.foot_usage_ratio(session)
+        ratio = self.calculate_touch_balance(session)
 
         if ratio is None:
             return "unknown"
@@ -162,10 +164,17 @@ class SessionService:
             return "balanced"
 
 
-    def performance_score(self,player):
+    def performance_score(self,player_id):
         """
         Computes a performance score for a player by combining a multitude of metrics
         Args:
         player -> a player object. this can be added into a loop to iterate through a repository of players
         """
         pass
+
+    def sprint_density(session):
+        if session.duration_minutes ==0:
+            return 0
+        
+        return session.sprint_count / session.duration_minutes
+    
