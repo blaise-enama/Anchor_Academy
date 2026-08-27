@@ -104,6 +104,7 @@ def connect_to_database(interactive: bool = False) -> Optional[pymysql.connectio
                     logging.info("Aborting interactive DB connection.")
                     return None
     else:
+        #interactive = False
         try:
             conn = try_connect(host, port, user, password, database=db_name)
             logging.info("Connected to DB (non-interactive) successfully.")
