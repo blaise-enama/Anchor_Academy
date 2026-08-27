@@ -73,23 +73,30 @@ class PlayerService:
         """
         calls get_roster from the playerRepo and turns each row into a domain player object
         """
-        #depending on if the user is using a real database, the different rosters should be called
-        #try appending the roster to a real database connection
         rows = self.player_repo.get_roster()
-        #initialize a list of player objects
         roster = []
 
         for r in rows:
+            if isinstance(r, dict):
+                pid = r.get("player_id")
+                name = r.get("name")
+                position = r.get("position")
+                age = r.get("age")
+                team = r.get("team")
+            else:
+                # fallback tuple ordering: (id, name, position, age, team)
+                pid, name, position, age, team = r
+
             roster.append(
                 Player(
-                    player_id=r["player_id"],
-                    name=r["name"],
-                    position=r["position"],
-                    age=r["age"],
-                    team=r["team"]
+                    player_id=pid,
+                    name=name,
+                    position=position,
+                    age=age,
+                    team=team,
                 )
             )
-            
+
         return roster
 
     
@@ -99,19 +106,22 @@ class PlayerService:
         """
         A function that returns a player object as well as their corresponding sessions
         """
+        
         #If neither player_id nor name provided, raise a valueError
         if not player_id and not name:
             raise ValueError("player_id or name must be provided")
         
         #If just player_id is provided, locate player by ID. Otherwise, locate them by name if provided
         if player_id is not None:
-            row = self.fake_roster.get_by_id(player_id) 
+            #row = self.fake_roster.get_by_id(player_id)
+            row= self.player_repo.fetch_by_id(player_id) 
+            logging.info(f"Retrieved player by id: {row}")
             print(f"Roster lookup returned: {row}")
-            #self.player_repo.fetch_by_id(player_id)
         else:
-            row = self.fake_roster.get_by_name(name)
+            row = self.player_repo.get_by_name(name)
+            logging.info(f"Retrieved player by name: {row}")
             print(f"Roster lookup returned: {row}")
-            #self.player_repo.locate_player(name)
+            #self.fake_roster.locate_player(name)
 
         #IF neither are provided, return none
         if not row:
@@ -121,11 +131,11 @@ class PlayerService:
         #maps each value from the database row into a named attribute
         #conceptually, this converts raw database data into a domain object
         player = Player(
-            player_id=row[0],
-            name=row[1],
-            position=row[2],
-            age=row[3],
-            team=row[4]
+            player_id=row["player_id"] if isinstance(row, dict) else row[0],
+            name=row["name"] if isinstance(row, dict) else row[1],
+            position=row["position"] if isinstance(row, dict) else row[2],
+            age=row["age"] if isinstance(row, dict) else row[3],
+            team=row["team"] if isinstance(row, dict) else row[4],
         )
 
         #use the get_player_sessions function and id attribute to retrieve the above player object's sessions
@@ -141,30 +151,18 @@ class PlayerService:
                 session_id=s[0],
                 player_id=s[1],
                 session_date=s[2],
-                duration_minutes=s[3]
+                duration_minutes=s[3],
             )
 
-            session.add_metric(
-                SessionMetric("total_distance", s[4], "m")
-            )
-
-            session.add_metric(
-                SessionMetric("sprints", s[5], "count")
-            )
-
-            session.add_metric(
-                SessionMetric("max_speed", s[6], "km/h")
-            )
-
-            session.add_metric(
-                SessionMetric("touches_left", s[7], "touches")
-            )
-
-            session.add_metric(
-                SessionMetric("touches_right", s[8], "touches")
-            )
-
+            # add metrics (SessionMetric constructor may differ; adapt if needed)
+            session.add_metric(SessionMetric("total_distance", s[4], "m"))
+            session.add_metric(SessionMetric("sprints", s[5], "count"))
+            session.add_metric(SessionMetric("max_speed", s[6], "km/h"))
+            session.add_metric(SessionMetric("touches_left", s[7], "touches"))
+            session.add_metric(SessionMetric("touches_right", s[8], "touches"))
+            
             player.sessions.append(session)
+        return player
 
 
     def delete_player(self, player_id):

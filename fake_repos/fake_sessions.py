@@ -42,6 +42,17 @@ class FakeSessionRepo:
                 )
         
 
+    def get_player_sessions(self, player_id, name=None):
+        # returns list of sessions rows in the same tuple/dict shape as the real repo's get_player_sessions (use tuple or dict)
+        sessions = self.sessions.get(player_id, [])
+        # Return rows as tuples matching original schema used by services:
+        # (session_id, player_id, session_date, duration_minutes, total_distance, sprint_count, max_speed, touches_left, touches_right)
+        return sessions
+
+    """def get_all(self):
+        return [s for subs in self.sessions.values() for s in subs]
+    """
+    
     def get_all(self):
         return [
             session

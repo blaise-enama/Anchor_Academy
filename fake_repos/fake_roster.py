@@ -27,8 +27,18 @@ class FakePlayerRepo:
         return None
     
     def get_roster(self):
-        return list(self.players.values())
-    
+        """
+        returns a list of all players in the fake repo
+        """
+        return [ 
+            { "player_id": pid,
+              "name": p[1], 
+              "position": p[2], 
+              "age": p[3], 
+              "team": p[4] 
+            } 
+            for pid, p in self.players.items() 
+            ]
     
     def add_player_to_fake_repo(self, player: Player):
         """
@@ -47,3 +57,21 @@ class FakePlayerRepo:
         """
         new_id = self.add_player_to_fake_repo(player)
         return new_id
+    
+    def fetch_by_id(self, player_id):
+        p = self.players.get(player_id)
+        if not p:
+            return None
+        
+        return {"player_id": p[0], 
+                "name": p[1], 
+                "position": p[2], 
+                "age": p[3], 
+                "team": p[4]
+                }
+
+    def locate_player(self, name):
+        for p in self.players.values():
+            if p[1] == name:
+                return {"player_id": p[0], "name": p[1], "position": p[2], "age": p[3], "team": p[4]}
+        return None
