@@ -1,10 +1,10 @@
 import argparse
 import logging
-from anchor_academy.models.player_tracker import *
-from anchor_academy.repositories.sessionRepo import SessionRepository
-from anchor_academy.repositories.playerRepo import PlayerRepository
-from anchor_academy.services.session_services import SessionService
-from anchor_academy.services.player_service import PlayerService
+from anchor_academy.src.models.player_tracker import *
+from anchor_academy.src.repositories.sessionRepo import SessionRepository
+from anchor_academy.src.repositories.playerRepo import PlayerRepository
+from anchor_academy.src.services.session_services import SessionService
+from anchor_academy.src.services.player_service import PlayerService
 from fake_repos.fake_roster import FakePlayerRepo
 from fake_repos.fake_sessions import FakeSessionRepo
 from anchor_academy.database.setup import connect_to_database, initialize_anchor_academy    

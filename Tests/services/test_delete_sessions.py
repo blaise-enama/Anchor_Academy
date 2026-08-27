@@ -1,7 +1,7 @@
 import pytest
 from datetime import date
-from anchor_academy.player_tracker import Session
-from anchor_academy.services.session_services import SessionService
+from anchor_academy.src.models.player_tracker import Session
+from anchor_academy.src.services.session_services import SessionService
 from tests.fakes.session_repo import FakeSessionRepo
 
 def test_delete_session_removes_session():

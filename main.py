@@ -1,6 +1,6 @@
-from anchor_academy.player_tracker import *
+from anchor_academy.src.models.player_tracker import *
 from anchor_academy.database.setup import connect_to_database, initialize_anchor_academy
-from anchor_academy.repositories.playerRepo import PlayerRepository
+from anchor_academy.src.repositories.playerRepo import PlayerRepository
 from fake_repos.fake_sessions import FakeSessionRepo
 from fake_repos.players import FakePlayerRepo
 from cli import *
@@ -59,7 +59,8 @@ def main():
 
     #prompt user to transition to the CLI for further interaction with the application
     print("\nWe will now transition you to the CLI for further interaction with the application.")  
-
+    
+    run_main()  # Call the run_main function to start the CLI  
     
 
 

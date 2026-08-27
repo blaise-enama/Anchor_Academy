@@ -1,5 +1,5 @@
 from anchor_academy.repositories import *
-from anchor_academy.models.player_tracker import *
+from anchor_academy.src.models.player_tracker import *
 
 
 class FakePlayerRepo:
