@@ -1,6 +1,6 @@
 import os
 import mysql.connector
-import pymysql
+import pymysql.cursors
 import csv
 import logging
 import pandas as pd
@@ -10,7 +10,6 @@ from sqlalchemy import create_engine
 from typing import List, Optional
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
-
 
 
 def execute_query(conn,query, params=None, fetch=False):
@@ -25,8 +24,10 @@ def execute_query(conn,query, params=None, fetch=False):
     
     do i need this function if I can just run cursor.execute("SELECT...;")
     """
+
     try:
-        with conn.cursor(dictionary=True) as cursor:
+        # Use a dictionary cursor for better readability
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute(query, params)
             if fetch:
                 logging.info("SELECT query executed")
@@ -183,12 +184,25 @@ class Session:
                  session_type: Optional[str] = None,
                  session_date: Optional[datetime] = None, 
                  duration_minutes: Optional[int] = None,
+                 sprint_count: Optional[int] = None,
+                total_distance: Optional[float] = None,
+                max_speed: Optional[float] = None,
+                touches_left: Optional[int] = None,
+                touches_right: Optional[int] = None,
+                dominant_foot: Optional[str] = None,
      ):
         self.session_id= session_id
         self.player_id = player_id
         self.session_type = session_type
         self.session_date = session_date
         self.duration_minutes = duration_minutes
+        self.sprint_count = sprint_count
+        self.total_distance = total_distance
+        self.max_speed = max_speed
+        self.touches_left = touches_left
+        self.touches_right = touches_right
+        self.dominant_foot = dominant_foot
+        
         
         #initialize a list of sessions to be created to store multiple Session objects
         # think: Session.metrics = [Session(player_id=10,session_type='training', session_date=datetime(2026, 3, 22), duration=90)]
@@ -273,7 +287,7 @@ class Session:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE date=%s, duration=%s, distance=%s, sprint_count=%s, max_speed=%s, touches_left=%s, touches_right=%s
         """,
-            (self.player_id, self.session_date, self.duration, self.distance, self.sprints, self.max_speed, self.touches_left, self.touches_right)
+            (self.player_id, self.session_date, self.duration_minutes, self.total_distance, self.sprint_count, self.max_speed, self.touches_left, self.touches_right)
         )
 
         conn.commit() #Commits current transaction.This method sends a COMMIT statement to the MySQL server, committing the current transaction.        conn.close()
