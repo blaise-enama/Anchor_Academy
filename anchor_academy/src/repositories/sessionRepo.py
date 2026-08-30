@@ -12,17 +12,20 @@ class SessionRepository:
 
     def create_sessions_table(self):
         query = """
-                CREATE TABLE sessions(
-                session_id,
-                player_id,
-                session_date,
-                duration_minutes,
-                sprint_count,
-                total_distance,
-                max_speed,
-                touches_left,
-                touches_right)
-                """
+                CREATE TABLE IF NOT EXISTS sessions(
+                session_id INT AUTO_INCREMENT PRIMARY KEY,
+                player_id INT NOT NULL,
+                session_date DATE,
+                duration_minutes INT,
+                sprint_count INT,
+                total_distance FLOAT,
+                max_speed FLOAT,
+                touches_left INT,
+                touches_right INT,
+                dominant_foot VARCHAR(10),
+                FOREIGN KEY (player_id) REFERENCES roster(player_id)
+            )
+            """
         return execute_query(self.connection, query)
 
 
@@ -33,9 +36,10 @@ class SessionRepository:
         """
         execute_query(self.connection, query, 
                       (session.player_id, session.session_date,
-                       session.duration, session.sprints, 
-                       session.distance, 
+                       session.duration_minutes, session.sprint_count, 
+                       session.total_distance, 
                        session.max_speed, session.touches_left, session.touches_right))
+        return execute_query(self.connection, "SELECT LAST_INSERT_ID()", fetch=True)[0][0]  # Return the last inserted session_id
         
 
     
@@ -81,24 +85,13 @@ class SessionRepository:
     
     
     def delete_session(self, session_id):
-        """
-        Deletes a single session by session_id.
-        """
+        query = "DELETE FROM sessions WHERE session_id = %s"
         try:
-            query = "DELETE FROM sessions WHERE session_id = %s"
-            with self.connection.cursor() as cursor:
-                execute_query(self.connection, query, (session_id))
-                affected_rows = cursor.rowcount  # Number of rows affected
-            self.connection.commit()
-            logging.info(f"Session {session_id} successfully deleted.")
-            return affected_rows > 0  # True if deletion succeeded, False if no record found
-        
+            result = execute_query(self.connection, query, (session_id,))
+            return result is not None
         except pymysql.MySQLError as e:
-            logging.info(f"Error while deleting session. : {e}")
-            self.connection.rollback()  # Ensures the database stays consistent if something fails
-            
-            return False  # Lets the application logic know whether the deletion actually occurred. 
-        
+            logging.info(f"Error while deleting session: {e}")
+            return False
 
     def delete_sessions_by_player(self, player_id):
         """
