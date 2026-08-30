@@ -139,8 +139,8 @@ class PlayerService:
         )
 
         #use the get_player_sessions function and id attribute to retrieve the above player object's sessions
-        sessions = self.fake_sessions.list_sessions_by_player(player.player_id)
-        #self.session_repo.get_player_sessions(player.player_id)
+        #sessions = self.fake_sessions.list_sessions_by_player(player.player_id)
+        sessions = self.session_repo.get_player_sessions(player.player_id)
 
         #iterate through the session objects, and store a list of sessions 
         player.sessions = []
@@ -148,18 +148,23 @@ class PlayerService:
         for s in sessions:
 
             session = Session(
-                session_id=s[0],
-                player_id=s[1],
-                session_date=s[2],
-                duration_minutes=s[3],
+                session_id=s["session_id"] if isinstance(s, dict) else s[0],
+                player_id=s["player_id"] if isinstance(s, dict) else s[1],
+                session_date=s["session_date"] if isinstance(s, dict) else s[2],
+                sprint_count=s["sprint_count"] if isinstance(s, dict) else s[4],
+                total_distance=s["total_distance"] if isinstance(s, dict) else s[5],
+                max_speed=s["max_speed"] if isinstance(s, dict) else s[6],
+                touches_left=s["touches_left"] if isinstance(s, dict) else s[7],
+                touches_right=s["touches_right"] if isinstance(s, dict) else s[8],
+                #dominant_foot=s["dominant_foot"] if isinstance(s, dict) else s[9],
             )
 
             # add metrics (SessionMetric constructor may differ; adapt if needed)
-            session.add_metric(SessionMetric("total_distance", s[4], "m"))
-            session.add_metric(SessionMetric("sprints", s[5], "count"))
-            session.add_metric(SessionMetric("max_speed", s[6], "km/h"))
-            session.add_metric(SessionMetric("touches_left", s[7], "touches"))
-            session.add_metric(SessionMetric("touches_right", s[8], "touches"))
+            session.add_metric(SessionMetric("total_distance", s["total_distance"] if isinstance(s, dict) else s[5], "m"))
+            session.add_metric(SessionMetric("sprints", s["sprint_count"] if isinstance(s, dict) else s[4], "count"))
+            session.add_metric(SessionMetric("max_speed", s["max_speed"] if isinstance(s, dict) else s[6], "km/h"))
+            session.add_metric(SessionMetric("touches_left", s["touches_left"] if isinstance(s, dict) else s[7], "touches"))
+            session.add_metric(SessionMetric("touches_right", s["touches_right"] if isinstance(s, dict) else s[8], "touches"))
             
             player.sessions.append(session)
         return player

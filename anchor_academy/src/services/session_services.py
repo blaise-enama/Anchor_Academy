@@ -62,16 +62,16 @@ class SessionService:
         for row in rows:
             sessions.append(
                 Session(
-                session_id=row[0],
-                player_id=row[1],
-                session_date=row[2],
-                duration_minutes=row[3],
-                sprint_count=row[4],
-                total_distance=row[5],
-                max_speed=row[6],
-                touches_left=row[7],
-                touches_right=row[8], 
-                dom_ft=row[9]
+                session_id=row["session_id"] if isinstance(row, dict) else row[0],
+                player_id=row["player_id"] if isinstance(row, dict) else row[1],
+                session_date=row["session_date"] if isinstance(row, dict) else row[2],
+                duration_minutes=row["duration_minutes"] if isinstance(row, dict) else row[3],
+                sprint_count=row["sprint_count"] if isinstance(row, dict) else row[4],
+                total_distance=row["total_distance"] if isinstance(row, dict) else row[5],
+                max_speed=row["max_speed"] if isinstance(row, dict) else row[6],
+                touches_left=row["touches_left"] if isinstance(row, dict) else row[7],
+                touches_right=row["touches_right"] if isinstance(row, dict) else row[8], 
+                #dominant_foot=row["dominant_foot"] if isinstance(row, dict) else row[9]
             )
             )
 
