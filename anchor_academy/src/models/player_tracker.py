@@ -89,11 +89,7 @@ class Player:
 
     def __repr__(self):
         return (
-            self.player_id,
-            self.name,
-            self.position,
-            self.age,
-            self.team
+            f"Player(player_id:{self.player_id}, Name: {self.name}, Age: {self.age}, Position: {self.position}, Team: {self.team})"
         )
 
 
@@ -117,7 +113,7 @@ class Player:
                                        touches_left, touches_right, acceleration_events, deceleration_events,
                                        session_duration, fatigue_level)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (self.player_id, s.session_date, s.distance, s.sprints, s.top_speed,
+            """, (self.player_id, s.session_date, s.total_distance, s.sprint_count, s.max_speed,
                   s.touches_left, s.touches_right, s.accels, s.decels, s.duration, s.fatigue))
         conn.commit()
         #player_id = cursor.lastrowid
