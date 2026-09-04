@@ -51,7 +51,7 @@ class SessionRepository:
         if player_id is None and name is None:
             raise ValueError("Either player_id or name must be provided")
 
-        if player_id is None:
+        if player_id is None and name is not None:
             query = """
             SELECT * 
             FROM sessions 
@@ -63,24 +63,23 @@ class SessionRepository:
             ORDER BY session_date DESC
             """
             return execute_query(self.connection, query, (name,), fetch=True)
-        
-        query = """
-        SELECT 
-            session_id,
-            player_id,
-            session_date,
-            duration_minutes,
-            sprint_count,
-            total_distance,
-            max_speed,
-            touches_left,
-            touches_right
-        FROM sessions 
-        WHERE player_id = %s 
-        ORDER BY session_date DESC
-        """
-        
-        return execute_query(self.connection, query, (player_id,), fetch=True)
+        elif player_id is not None:
+            query = """
+            SELECT 
+                session_id,
+                player_id,
+                session_date,
+                duration_minutes,
+                total_distance,
+                sprint_count,
+                max_speed,
+                touches_left,
+                touches_right
+                FROM sessions 
+                WHERE player_id = %s 
+                ORDER BY session_date DESC
+                """
+            return execute_query(self.connection, query, (player_id,), fetch=True)
 
     
     
@@ -137,26 +136,24 @@ class SessionRepository:
             FROM sessions
             """
         
-        cursor= self.connection.cursor()
-        cursor.execute(query)
-
-        rows = cursor.fetchall()
+        return execute_query(self.connection, query, fetch=True)
+        """
 
         sessions = [
             Session(
-                session_id=row[0],
-                player_id=row[1],
-                session_date=row[2],
-                duration_minutes=row[3],
-                sprint_count=row[4],
-                total_distance=row[5],
-                max_speed=row[6],
-                touches_left=row[7],
-                touches_right=row[8]
+                session_id=row["session_id"] if isinstance(row, dict) else row[0],
+                player_id=row["player_id"] if isinstance(row, dict) else row[1],
+                session_date=row["session_date"] if isinstance(row, dict) else row[2],
+                duration_minutes=row["duration_minutes"] if isinstance(row, dict) else row[3],
+                sprint_count=row["sprint_count"] if isinstance(row, dict) else row[4],
+                total_distance=row["total_distance"] if isinstance(row, dict) else row[5],
+                max_speed=row["max_speed"] if isinstance(row, dict) else row[6],
+                touches_left=row["touches_left"] if isinstance(row, dict) else row[7],
+                touches_right=row["touches_right"] if isinstance(row, dict) else row[8]
             )
             for row in rows
         ]
 
-        return sessions
+        return sessions"""
     
         
