@@ -65,6 +65,7 @@ class Session:
                  session_type: Optional[str] = None,
                  session_date: Optional[datetime] = None, 
                  duration_minutes: Optional[int] = None,
+                 
      ):
         self.session_id= session_id
         self.player_id = player_id

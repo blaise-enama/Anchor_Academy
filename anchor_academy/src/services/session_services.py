@@ -74,6 +74,7 @@ class SessionService:
                 #dominant_foot=row["dominant_foot"] if isinstance(row, dict) else row[9]
             )
             )
+            
 
         return sessions
     
@@ -87,7 +88,8 @@ class SessionService:
     
 
     def get_sessions(self):
-        return self.sessionRepo.get_sessions_by_player()
+        
+        return self.sessionRepo.get_player_sessions()
 
 
     def compute_workrate(self, session):
