@@ -161,9 +161,9 @@ def list_sessions(args, session_repo):
             f"Session ID: {s.session_id} | "
             f"Player ID: {s.player_id} | "
             f"Date: {s.session_date} | "
-            f"Duration: {s.duration} min | "
-            f"Sprints: {s.sprints} |"
-            f"Distance: {s.distance} m | "
+            f"Duration: {s.duration_minutes} min | "
+            f"Sprints: {s.sprint_count} |"
+            f"Distance: {s.total_distance} m | "
             f"Max Speed: {s.max_speed} | "
             f"Left Touches: {s.touches_left} |"
             f"Right Touches: {s.touches_right} |"
@@ -174,12 +174,13 @@ def build_session_report(session):
         return {
         "session_id": session.session_id,
         "date": session.session_date,
+        "duration": session.duration_minutes if hasattr(session, 'duration_minutes') else None,
         "distance": session.total_distance,
-        "sprints": session.sprint_count,
-        "max_speed": session.max_speed,
-        "touches_left": session.touches_left,
-        "touches_right": session.touches_right,
-        "dominant_foot": session.dominant_foot
+        "sprints": session.sprint_count if hasattr(session, 'sprint_count') else None,
+        "max_speed": session.max_speed if hasattr(session, 'max_speed') else None,
+        "touches_left": session.touches_left if hasattr(session, 'touches_left') else None,
+        "touches_right": session.touches_right if hasattr(session, 'touches_right') else None,
+        # "dominant_foot": session.dominant_foot if hasattr(session, 'dominant_foot') else None
     }
 
 
@@ -213,12 +214,13 @@ def list_player_sessions(args, player_service):
             print(
                 f"Session ID: {report['session_id']} | "
                 f"Date: {report['date']} | "
-                f"Distance: {report['distance']} m | "
+                f"Duration: {report['duration']} min | "
                 f"Sprints: {report['sprints']} | "
+                f"Distance: {report['distance']} m | "
                 f"Max Speed: {report['max_speed']} km/h | "
                 f"Touches Left: {report['touches_left']} | "
                 f"Touches Right: {report['touches_right']} | "
-                f"Dominant Foot: {report['dominant_foot']} | "
+                #f"Dominant Foot: {report['dominant_foot']} | "
             )
 
     except Exception as e:
