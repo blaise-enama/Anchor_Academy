@@ -69,6 +69,23 @@ class PlayerService:
             team=row[4]
         )
 
+    def get_player_by_id(self, player_id):
+        """
+        A function that retrieves a player object by calling the fetch_by_id function from the Repo
+        """
+        row = self.player_repo.fetch_by_id(player_id)
+
+        if not row:
+            return None
+
+        return Player(
+            player_id=row["player_id"] if isinstance(row, dict) else row[0],
+            name=row["name"] if isinstance(row, dict) else row[1],
+            age=row["age"] if isinstance(row, dict) else row[2],
+            position=row["position"] if isinstance(row, dict) else row[3],
+            team=row["team"] if isinstance(row, dict) else row[4]
+        )
+
     def list_players(self):
         """
         calls get_roster from the playerRepo and turns each row into a domain player object
@@ -151,6 +168,7 @@ class PlayerService:
                 session_id=s["session_id"] if isinstance(s, dict) else s[0],
                 player_id=s["player_id"] if isinstance(s, dict) else s[1],
                 session_date=s["session_date"] if isinstance(s, dict) else s[2],
+                duration_minutes=s["duration_minutes"] if isinstance(s, dict) else s[3],
                 sprint_count=s["sprint_count"] if isinstance(s, dict) else s[4],
                 total_distance=s["total_distance"] if isinstance(s, dict) else s[5],
                 max_speed=s["max_speed"] if isinstance(s, dict) else s[6],
